@@ -21,6 +21,14 @@ enum AppEnvironment: String {
         #endif
     }
 
+    static var isTestFlight: Bool {
+        Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+    }
+
+    static var showDebugConsole: Bool {
+        current == .development || isTestFlight
+    }
+
     // MARK: - Configuration Values
 
     /// Base URL for API requests

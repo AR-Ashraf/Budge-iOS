@@ -29,41 +29,51 @@ final class Logger {
     // MARK: - App Logging
 
     func app(_ message: String, level: LogLevel = .info, file: String = #file, function: String = #function, line: Int = #line) {
-        guard level >= minimumLevel else { return }
         let context = formatContext(file: file, function: function, line: line)
-        log(to: appLogger, message: "\(context) \(message)", level: level)
+        let formatted = "\(context) \(message)"
+        LogBuffer.shared.append(category: "App", level: level, message: formatted)
+        guard level >= minimumLevel else { return }
+        osLog(to: appLogger, message: formatted, level: level)
     }
 
     // MARK: - Network Logging
 
     func network(_ message: String, level: LogLevel = .info, file: String = #file, function: String = #function, line: Int = #line) {
-        guard level >= minimumLevel else { return }
         let context = formatContext(file: file, function: function, line: line)
-        log(to: networkLogger, message: "\(context) \(message)", level: level)
+        let formatted = "\(context) \(message)"
+        LogBuffer.shared.append(category: "Network", level: level, message: formatted)
+        guard level >= minimumLevel else { return }
+        osLog(to: networkLogger, message: formatted, level: level)
     }
 
     // MARK: - Data Logging
 
     func data(_ message: String, level: LogLevel = .info, file: String = #file, function: String = #function, line: Int = #line) {
-        guard level >= minimumLevel else { return }
         let context = formatContext(file: file, function: function, line: line)
-        log(to: dataLogger, message: "\(context) \(message)", level: level)
+        let formatted = "\(context) \(message)"
+        LogBuffer.shared.append(category: "Data", level: level, message: formatted)
+        guard level >= minimumLevel else { return }
+        osLog(to: dataLogger, message: formatted, level: level)
     }
 
     // MARK: - UI Logging
 
     func ui(_ message: String, level: LogLevel = .info, file: String = #file, function: String = #function, line: Int = #line) {
-        guard level >= minimumLevel else { return }
         let context = formatContext(file: file, function: function, line: line)
-        log(to: uiLogger, message: "\(context) \(message)", level: level)
+        let formatted = "\(context) \(message)"
+        LogBuffer.shared.append(category: "UI", level: level, message: formatted)
+        guard level >= minimumLevel else { return }
+        osLog(to: uiLogger, message: formatted, level: level)
     }
 
     // MARK: - Auth Logging
 
     func auth(_ message: String, level: LogLevel = .info, file: String = #file, function: String = #function, line: Int = #line) {
-        guard level >= minimumLevel else { return }
         let context = formatContext(file: file, function: function, line: line)
-        log(to: authLogger, message: "\(context) \(message)", level: level)
+        let formatted = "\(context) \(message)"
+        LogBuffer.shared.append(category: "Auth", level: level, message: formatted)
+        guard level >= minimumLevel else { return }
+        osLog(to: authLogger, message: formatted, level: level)
     }
 
     // MARK: - Error Logging
@@ -76,12 +86,13 @@ final class Logger {
         } else {
             message = "\(fileContext) \(error.localizedDescription)"
         }
-        log(to: appLogger, message: message, level: .error)
+        LogBuffer.shared.append(category: "App", level: .error, message: message)
+        osLog(to: appLogger, message: message, level: .error)
     }
 
     // MARK: - Private Methods
 
-    private func log(to logger: os.Logger, message: String, level: LogLevel) {
+    private func osLog(to logger: os.Logger, message: String, level: LogLevel) {
         switch level {
         case .debug:
             logger.debug("\(message, privacy: .public)")

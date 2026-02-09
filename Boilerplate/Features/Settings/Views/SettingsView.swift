@@ -13,10 +13,8 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel?
     @State private var showingSignOutConfirmation = false
     @State private var showingClearCacheConfirmation = false
-
-    #if DEBUG
     @State private var showingResetDataConfirmation = false
-    #endif
+    @State private var showingDebugConsole = false
 
     // MARK: - Body
 
@@ -38,10 +36,10 @@ struct SettingsView: View {
                 // About section
                 aboutSection(viewModel)
 
-                #if DEBUG
-                // Debug section
-                debugSection(viewModel)
-                #endif
+                // Debug section (development + TestFlight)
+                if AppEnvironment.showDebugConsole {
+                    debugSection(viewModel)
+                }
 
                 // Sign out
                 signOutSection
@@ -82,20 +80,21 @@ struct SettingsView: View {
         } message: {
             Text("This will clear all cached data. You may need to re-download some content.")
         }
-        #if DEBUG
-            .confirmationDialog(
-                "Reset All Data",
-                isPresented: $showingResetDataConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Reset All Data", role: .destructive) {
-                    viewModel?.resetAllData()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will delete all app data including your account. This cannot be undone.")
+        .confirmationDialog(
+            "Reset All Data",
+            isPresented: $showingResetDataConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Reset All Data", role: .destructive) {
+                viewModel?.resetAllData()
             }
-        #endif
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will delete all app data including your account. This cannot be undone.")
+        }
+        .sheet(isPresented: $showingDebugConsole) {
+            DebugConsoleView()
+        }
     }
 
     // MARK: - Sections
@@ -201,9 +200,14 @@ struct SettingsView: View {
         }
     }
 
-    #if DEBUG
     private func debugSection(_ viewModel: SettingsViewModel) -> some View {
-        Section("Debug") {
+        Section("Developer") {
+            Button {
+                showingDebugConsole = true
+            } label: {
+                Label("Debug Console", systemImage: "terminal")
+            }
+
             Button {
                 viewModel.resetOnboarding()
             } label: {
@@ -217,7 +221,6 @@ struct SettingsView: View {
             }
         }
     }
-    #endif
 
     private var signOutSection: some View {
         Section {
