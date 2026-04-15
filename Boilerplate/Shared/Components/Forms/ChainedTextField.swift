@@ -1,11 +1,15 @@
 import SwiftUI
 import UIKit
 
-struct NoAssistantTextField: UIViewRepresentable {
+/// A UITextField wrapper that:
+/// - disables the iOS input assistant bar (avoids AutoLayout spam in some OS versions)
+/// - supports chaining "Next" to another field by tag
+/// - supports "Go/Done" submit via closure
+struct ChainedTextField: UIViewRepresentable {
     final class Coordinator: NSObject, UITextFieldDelegate {
-        var parent: NoAssistantTextField
+        var parent: ChainedTextField
 
-        init(parent: NoAssistantTextField) {
+        init(parent: ChainedTextField) {
             self.parent = parent
         }
 
@@ -14,21 +18,29 @@ struct NoAssistantTextField: UIViewRepresentable {
         }
 
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-            parent.onReturn?()
+            if let nextTag = parent.nextTag,
+               let next = textField.window?.viewWithTag(nextTag) as? UITextField {
+                next.becomeFirstResponder()
+                return false
+            }
+
+            parent.onSubmit?()
             return false
         }
     }
 
     @Binding var text: String
+
     let placeholder: String
-    @Binding var isFirstResponder: Bool
+    let tag: Int
+    var nextTag: Int?
 
     var keyboardType: UIKeyboardType = .default
     var textContentType: UITextContentType?
     var autocapitalizationType: UITextAutocapitalizationType = .sentences
     var isSecureTextEntry: Bool = false
     var returnKeyType: UIReturnKeyType = .default
-    var onReturn: (() -> Void)?
+    var onSubmit: (() -> Void)?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -36,19 +48,19 @@ struct NoAssistantTextField: UIViewRepresentable {
 
     func makeUIView(context: Context) -> UITextField {
         let tf = UITextField(frame: .zero)
+        tf.tag = tag
         tf.delegate = context.coordinator
         tf.borderStyle = .none
         tf.backgroundColor = .clear
         tf.textColor = UIColor.label
 
-        applyConfiguration(tf)
-        tf.text = text
-
-        // Hard-disable the assistant bar per-instance.
+        // Disable input assistant bar per-instance.
         let emptyGroups: [UIBarButtonItemGroup] = []
         tf.inputAssistantItem.leadingBarButtonGroups = emptyGroups
         tf.inputAssistantItem.trailingBarButtonGroups = emptyGroups
 
+        applyConfiguration(tf)
+        tf.text = text
         return tf
     }
 
@@ -62,47 +74,17 @@ struct NoAssistantTextField: UIViewRepresentable {
         let emptyGroups: [UIBarButtonItemGroup] = []
         uiView.inputAssistantItem.leadingBarButtonGroups = emptyGroups
         uiView.inputAssistantItem.trailingBarButtonGroups = emptyGroups
-
-        // First responder control
-        if isFirstResponder, !uiView.isFirstResponder {
-            uiView.becomeFirstResponder()
-        }
     }
 
     private func applyConfiguration(_ tf: UITextField) {
-        if tf.placeholder != placeholder {
-            tf.placeholder = placeholder
-        }
-
-        if tf.keyboardType != keyboardType {
-            tf.keyboardType = keyboardType
-        }
-
-        if tf.textContentType != textContentType {
-            tf.textContentType = textContentType
-        }
-
-        if tf.autocorrectionType != .no {
-            tf.autocorrectionType = .no
-        }
-
-        if tf.spellCheckingType != .no {
-            tf.spellCheckingType = .no
-        }
-
-        if tf.autocapitalizationType != autocapitalizationType {
-            tf.autocapitalizationType = autocapitalizationType
-        }
-
-        if tf.returnKeyType != returnKeyType {
-            tf.returnKeyType = returnKeyType
-        }
-
-        // Setting secureTextEntry can cause UIKit to relayout/recreate caret/selection.
-        // Only change it when needed to avoid SwiftUI update cycles.
-        if tf.isSecureTextEntry != isSecureTextEntry {
-            tf.isSecureTextEntry = isSecureTextEntry
-        }
+        if tf.placeholder != placeholder { tf.placeholder = placeholder }
+        if tf.keyboardType != keyboardType { tf.keyboardType = keyboardType }
+        if tf.textContentType != textContentType { tf.textContentType = textContentType }
+        if tf.autocorrectionType != .no { tf.autocorrectionType = .no }
+        if tf.spellCheckingType != .no { tf.spellCheckingType = .no }
+        if tf.autocapitalizationType != autocapitalizationType { tf.autocapitalizationType = autocapitalizationType }
+        if tf.returnKeyType != returnKeyType { tf.returnKeyType = returnKeyType }
+        if tf.isSecureTextEntry != isSecureTextEntry { tf.isSecureTextEntry = isSecureTextEntry }
     }
 }
 

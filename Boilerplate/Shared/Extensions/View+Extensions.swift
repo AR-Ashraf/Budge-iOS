@@ -127,13 +127,7 @@ extension View {
 
     /// Print debug info when view appears
     func debugOnAppear(_ message: String) -> some View {
-        #if DEBUG
-        return onAppear {
-            print("🔍 \(message)")
-        }
-        #else
         return self
-        #endif
     }
 }
 

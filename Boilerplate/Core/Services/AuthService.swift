@@ -1,5 +1,4 @@
 import Foundation
-import FirebaseCore
 import FirebaseAuth
 import FirebaseFirestore
 
@@ -54,7 +53,6 @@ final class AuthService {
 
     /// Check whether an email already has a sign-in method configured.
     func checkEmailExists(_ email: String) async throws -> Bool {
-        if FirebaseApp.app() == nil { FirebaseBootstrap.configureIfNeeded() }
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let methods = try await Auth.auth().fetchSignInMethods(forEmail: normalizedEmail)
         return !methods.isEmpty
@@ -63,7 +61,6 @@ final class AuthService {
     /// Sign in with email and password
     @MainActor
     func signIn(email: String, password: String) async throws {
-        if FirebaseApp.app() == nil { FirebaseBootstrap.configureIfNeeded() }
         isLoading = true
         error = nil
 
@@ -99,7 +96,6 @@ final class AuthService {
     /// Sign up with name, email, and password
     @MainActor
     func signUp(name: String, email: String, password: String) async throws {
-        if FirebaseApp.app() == nil { FirebaseBootstrap.configureIfNeeded() }
         isLoading = true
         error = nil
 
@@ -152,7 +148,6 @@ final class AuthService {
     /// Send a password reset email.
     @MainActor
     func sendPasswordReset(email: String) async throws {
-        if FirebaseApp.app() == nil { FirebaseBootstrap.configureIfNeeded() }
         isLoading = true
         error = nil
         defer { isLoading = false }

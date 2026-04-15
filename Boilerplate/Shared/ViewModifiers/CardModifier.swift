@@ -166,13 +166,11 @@ extension View {
             Text("Interactive Card")
                 .frame(maxWidth: .infinity)
                 .interactiveCard {
-                    print("Card tapped")
                 }
 
             Text("Selected Card")
                 .frame(maxWidth: .infinity)
                 .interactiveCard(isSelected: true) {
-                    print("Card tapped")
                 }
         }
         .padding()

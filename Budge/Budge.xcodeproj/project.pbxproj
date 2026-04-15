@@ -42,6 +42,7 @@
 		7FDA3D5A3826D95A74D46A97 /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6376E2F6F2F8CAA3CE0D26A6 /* ShimmerModifier.swift */; };
 		83005BA0EA58D23FBAA68C99 /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7D40A0CCB9404FC869F623 /* LoadingView.swift */; };
 		8C5FDD83AE4BEDA99D0B6233 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC9BBEE6C94628E574C86F51 /* SettingsView.swift */; };
+		92EBEF32860A8987D285C1FD /* ChainedTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B458CC3A980C40131F9E5A /* ChainedTextField.swift */; };
 		95EDE2AB7D29EF42FA1ED5AF /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742F11AD529777DFF6E41CA5 /* AppTheme.swift */; };
 		98396C309DEC821B7F057320 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C30B4D60785869943951E0F6 /* EmptyStateView.swift */; };
 		A15A1208548AF647430100EE /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51141364E73523126CDB11F /* Toast.swift */; };
@@ -133,6 +134,7 @@
 		DCBDAF8373E6B1060751C56F /* FirebaseAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseAppDelegate.swift; sourceTree = "<group>"; };
 		DE4EAF8A778FBE59BC72B354 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
 		DFFDC48A9E7E79BF37E828FF /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
+		E1B458CC3A980C40131F9E5A /* ChainedTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChainedTextField.swift; sourceTree = "<group>"; };
 		E25D9A77D0E7D3D88321B1BD /* LogBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogBuffer.swift; sourceTree = "<group>"; };
 		E5EE3C5F33459F698D820953 /* Route.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Route.swift; sourceTree = "<group>"; };
 		E7C9C99CA721AB9FF89B0A5C /* ExampleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleDetailView.swift; sourceTree = "<group>"; };
@@ -531,6 +533,7 @@
 		EA8AE6522CD90D990937F9AE /* Forms */ = {
 			isa = PBXGroup;
 			children = (
+				E1B458CC3A980C40131F9E5A /* ChainedTextField.swift */,
 				85466E0DCA784F8A5A081821 /* FormTextField.swift */,
 				30A9F03164A549F7CCDB58F2 /* FormValidation.swift */,
 				40C0618FF8465B1BD3946C37 /* NoAssistantTextField.swift */,
@@ -688,6 +691,7 @@
 				EC59AE8F90D1A70B4FA657D5 /* ButtonStyles.swift in Sources */,
 				62311FB1707CE314C4E366EB /* CGPoint+Extensions.swift in Sources */,
 				5483B53BE88F8C228C2871FA /* CardModifier.swift in Sources */,
+				92EBEF32860A8987D285C1FD /* ChainedTextField.swift in Sources */,
 				F691B0A3D588F5F9161B9BE4 /* Color+Extensions.swift in Sources */,
 				19C4F9927BDF98194842DD00 /* Date+Extensions.swift in Sources */,
 				509F70EA29A9597BE6F66017 /* DebugConsoleView.swift in Sources */,

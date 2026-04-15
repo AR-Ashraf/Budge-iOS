@@ -12,13 +12,12 @@ struct FormTextField: View {
     var keyboardType: UIKeyboardType = .default
     var textContentType: UITextContentType?
     var autocapitalizationType: UITextAutocapitalizationType = .sentences
+    var returnKeyType: UIReturnKeyType = .default
+    var isFirstResponder: Binding<Bool> = .constant(false)
+    var onReturn: (() -> Void)?
     var isRequired: Bool = false
     var validationMessage: String?
     var helpText: String?
-
-    // MARK: - State
-
-    @FocusState private var isFocused: Bool
 
     // MARK: - Body
 
@@ -28,19 +27,21 @@ struct FormTextField: View {
             HStack(spacing: UIConstants.Spacing.sm) {
                 if let icon {
                     Image(systemName: icon)
-                        .foregroundStyle((isFocused || !text.isEmpty) ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
+                        .foregroundStyle((isFirstResponder.wrappedValue || !text.isEmpty) ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
                         .frame(width: UIConstants.IconSize.medium)
                 }
 
                 NoAssistantTextField(
                     text: $text,
                     placeholder: placeholder.isEmpty ? label : placeholder,
+                    isFirstResponder: isFirstResponder,
                     keyboardType: keyboardType,
                     textContentType: textContentType,
                     autocapitalizationType: autocapitalizationType,
-                    isSecureTextEntry: false
+                    isSecureTextEntry: false,
+                    returnKeyType: returnKeyType,
+                    onReturn: onReturn
                 )
-                .focused($isFocused)
 
                 if !text.isEmpty {
                     Button {
@@ -85,7 +86,7 @@ struct FormTextField: View {
         if !text.isEmpty {
             return AppTheme.Colors.budgeGreenPrimary
         }
-        if isFocused {
+        if isFirstResponder.wrappedValue {
             return AppTheme.Colors.budgeGreenPrimary
         }
         return AppTheme.Colors.budgeAuthBorder
@@ -102,11 +103,13 @@ struct FormSecureField: View {
     var placeholder: String = ""
     var isRequired: Bool = false
     var validationMessage: String?
+    var returnKeyType: UIReturnKeyType = .default
+    var isFirstResponder: Binding<Bool> = .constant(false)
+    var onReturn: (() -> Void)?
 
     // MARK: - State
 
     @State private var isSecure = true
-    @FocusState private var isFocused: Bool
 
     // MARK: - Body
 
@@ -115,7 +118,7 @@ struct FormSecureField: View {
             // Secure field
             HStack(spacing: UIConstants.Spacing.sm) {
                 Image(systemName: "lock.fill")
-                    .foregroundStyle((isFocused || !text.isEmpty) ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
+                    .foregroundStyle((isFirstResponder.wrappedValue || !text.isEmpty) ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
                     .frame(width: UIConstants.IconSize.medium)
 
                 Group {
@@ -123,23 +126,28 @@ struct FormSecureField: View {
                         NoAssistantTextField(
                             text: $text,
                             placeholder: placeholder.isEmpty ? label : placeholder,
+                            isFirstResponder: isFirstResponder,
                             keyboardType: .default,
                             textContentType: .password,
                             autocapitalizationType: .none,
-                            isSecureTextEntry: true
+                            isSecureTextEntry: true,
+                            returnKeyType: returnKeyType,
+                            onReturn: onReturn
                         )
                     } else {
                         NoAssistantTextField(
                             text: $text,
                             placeholder: placeholder.isEmpty ? label : placeholder,
+                            isFirstResponder: isFirstResponder,
                             keyboardType: .default,
                             textContentType: .password,
                             autocapitalizationType: .none,
-                            isSecureTextEntry: false
+                            isSecureTextEntry: false,
+                            returnKeyType: returnKeyType,
+                            onReturn: onReturn
                         )
                     }
                 }
-                .focused($isFocused)
 
                 Button {
                     isSecure.toggle()
@@ -178,7 +186,7 @@ struct FormSecureField: View {
         if !text.isEmpty {
             return AppTheme.Colors.budgeGreenPrimary
         }
-        if isFocused {
+        if isFirstResponder.wrappedValue {
             return AppTheme.Colors.budgeGreenPrimary
         }
         return AppTheme.Colors.budgeAuthBorder

@@ -13,6 +13,9 @@ struct LoginView: View {
     @State private var viewModel: AuthViewModel?
     @State private var showToast = false
     @State private var toastMessage: String?
+    @State private var isPasswordHidden = true
+    private let emailTag = 1001
+    private let passwordTag = 1002
 
     // MARK: - Body
 
@@ -46,6 +49,10 @@ struct LoginView: View {
                 .padding(UIConstants.Padding.section)
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -76,6 +83,7 @@ struct LoginView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(height: 56)
+                .padding(.top, UIConstants.Spacing.xl)
                 .padding(.bottom, UIConstants.Spacing.xl)
 
             Text("Welcome")
@@ -92,32 +100,12 @@ struct LoginView: View {
 
     private func formSection(_ viewModel: AuthViewModel) -> some View {
         VStack(spacing: UIConstants.Spacing.md) {
-            FormTextField(
-                label: "",
-                text: Binding(
-                    get: { viewModel.email },
-                    set: { viewModel.email = $0 }
-                ),
-                placeholder: "Email",
-                icon: "envelope.fill",
-                keyboardType: .emailAddress,
-                textContentType: .emailAddress,
-                autocapitalizationType: .none,
-                validationMessage: viewModel.emailError
-            )
+            emailField(viewModel)
             .onChange(of: viewModel.email) { _, _ in
                 viewModel.validateEmail()
             }
 
-            FormSecureField(
-                label: "",
-                text: Binding(
-                    get: { viewModel.password },
-                    set: { viewModel.password = $0 }
-                ),
-                placeholder: "Password",
-                validationMessage: viewModel.passwordError
-            )
+            passwordField(viewModel)
 
             // Forgot password
             Button("Forgot Password?") {
@@ -129,12 +117,136 @@ struct LoginView: View {
 
             // Login button
             PrimaryLoadingButton("Enter to Budge") {
-                if await viewModel.login() {
-                    dismiss()
-                }
+                await submitLogin(viewModel)
             }
             .disabled(viewModel.email.isEmpty || viewModel.password.isEmpty)
             .padding(.top, UIConstants.Spacing.md)
+        }
+    }
+
+    private func emailField(_ viewModel: AuthViewModel) -> some View {
+        VStack(alignment: .leading, spacing: UIConstants.Spacing.xs) {
+            HStack(spacing: UIConstants.Spacing.sm) {
+                Image(systemName: "envelope.fill")
+                    .foregroundStyle(!viewModel.email.isEmpty ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
+                    .frame(width: UIConstants.IconSize.medium)
+
+                ChainedTextField(
+                    text: Binding(
+                        get: { viewModel.email },
+                        set: { viewModel.email = $0 }
+                    ),
+                    placeholder: "Email",
+                    tag: emailTag,
+                    nextTag: passwordTag,
+                    keyboardType: .emailAddress,
+                    textContentType: .emailAddress,
+                    autocapitalizationType: .none,
+                    isSecureTextEntry: false,
+                    returnKeyType: .next,
+                    onSubmit: nil
+                )
+
+                if !viewModel.email.isEmpty {
+                    Button {
+                        viewModel.email = ""
+                        HapticService.shared.lightImpact()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(AppTheme.Colors.tertiaryText)
+                    }
+                }
+            }
+            .padding(.horizontal, UIConstants.Spacing.md)
+            .frame(height: UIConstants.ButtonSize.medium)
+            .background(
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                    .fill(AppTheme.Colors.budgeAuthCard)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                    .stroke(emailBorderColor(viewModel), lineWidth: UIConstants.Border.standard)
+            )
+            .contentShape(Rectangle())
+
+            if let msg = viewModel.emailError {
+                Text(msg)
+                    .font(AppTheme.Typography.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func passwordField(_ viewModel: AuthViewModel) -> some View {
+        VStack(alignment: .leading, spacing: UIConstants.Spacing.xs) {
+            HStack(spacing: UIConstants.Spacing.sm) {
+                Image(systemName: "lock.fill")
+                    .foregroundStyle(!viewModel.password.isEmpty ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
+                    .frame(width: UIConstants.IconSize.medium)
+
+                ChainedTextField(
+                    text: Binding(
+                        get: { viewModel.password },
+                        set: { viewModel.password = $0 }
+                    ),
+                    placeholder: "Password",
+                    tag: passwordTag,
+                    nextTag: nil,
+                    keyboardType: .default,
+                    textContentType: .password,
+                    autocapitalizationType: .none,
+                    isSecureTextEntry: isPasswordHidden,
+                    returnKeyType: .go,
+                    onSubmit: {
+                        Task { await submitLogin(viewModel) }
+                    }
+                )
+
+                Button {
+                    isPasswordHidden.toggle()
+                    HapticService.shared.lightImpact()
+                } label: {
+                    Image(systemName: isPasswordHidden ? "eye.slash.fill" : "eye.fill")
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
+                }
+            }
+            .padding(.horizontal, UIConstants.Spacing.md)
+            .frame(height: UIConstants.ButtonSize.medium)
+            .background(
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                    .fill(AppTheme.Colors.budgeAuthCard)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                    .stroke(passwordBorderColor(viewModel), lineWidth: UIConstants.Border.standard)
+            )
+            .contentShape(Rectangle())
+
+            if let msg = viewModel.passwordError {
+                Text(msg)
+                    .font(AppTheme.Typography.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func emailBorderColor(_ viewModel: AuthViewModel) -> Color {
+        if viewModel.emailError != nil { return .red }
+        if !viewModel.email.isEmpty { return AppTheme.Colors.budgeGreenPrimary }
+        return AppTheme.Colors.budgeAuthBorder
+    }
+
+    private func passwordBorderColor(_ viewModel: AuthViewModel) -> Color {
+        if viewModel.passwordError != nil { return .red }
+        if !viewModel.password.isEmpty { return AppTheme.Colors.budgeGreenPrimary }
+        return AppTheme.Colors.budgeAuthBorder
+    }
+
+    @MainActor
+    private func submitLogin(_ viewModel: AuthViewModel) async {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        if await viewModel.login() {
+            dismiss()
         }
     }
 

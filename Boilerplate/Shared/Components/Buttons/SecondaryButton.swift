@@ -65,19 +65,15 @@ struct SecondaryButton: View {
 #Preview {
     VStack(spacing: 16) {
         SecondaryButton(title: "Cancel", action: {
-            print("Tapped")
         })
 
         SecondaryButton(title: "Add Item", action: {
-            print("Tapped")
         }, icon: "plus")
 
         SecondaryButton(title: "Loading", action: {
-            print("Tapped")
         }, isLoading: true)
 
         SecondaryButton(title: "Disabled", action: {
-            print("Tapped")
         })
         .disabled(true)
     }

@@ -125,7 +125,6 @@ extension EmptyStateView {
             message: "Create your first document to get started.",
             actionTitle: "Create Document"
         ) {
-            print("Create tapped")
         }
     }
 }
@@ -136,6 +135,5 @@ extension EmptyStateView {
 
 #Preview("Error State") {
     EmptyStateView.error(message: "Failed to load data.") {
-        print("Retry tapped")
     }
 }

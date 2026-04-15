@@ -192,20 +192,17 @@ struct ErrorBanner: View {
 
 #Preview {
     ErrorView(error: APIError.networkUnavailable) {
-        print("Retry tapped")
     }
 }
 
 #Preview("Server Error") {
     ErrorView(error: APIError.serverError(statusCode: 500, message: "Internal server error")) {
-        print("Retry tapped")
     }
 }
 
 #Preview("Error Banner") {
     VStack {
         ErrorBanner(message: "Failed to save changes") {
-            print("Dismissed")
         }
         .padding()
 

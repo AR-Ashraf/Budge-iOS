@@ -16,6 +16,7 @@ struct BoilerplateApp: App {
     // MARK: - Initialization
 
     init() {
+        FirebaseBootstrap.configureIfNeeded()
         authService = AuthService(apiClient: apiClient)
         configureAppearance()
     }
@@ -43,10 +44,6 @@ struct BoilerplateApp: App {
         UITextField.appearance().inputAssistantItem.trailingBarButtonGroups = emptyGroups
         UITextView.appearance().inputAssistantItem.leadingBarButtonGroups = emptyGroups
         UITextView.appearance().inputAssistantItem.trailingBarButtonGroups = emptyGroups
-
-        #if DEBUG
-        Logger.shared.app("App launched in \(AppEnvironment.current.rawValue) mode")
-        #endif
     }
 }
 
