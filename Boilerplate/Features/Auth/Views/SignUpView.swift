@@ -14,6 +14,14 @@ struct SignUpView: View {
     @State private var agreedToTerms = false
     @State private var showToast = false
     @State private var toastMessage: String?
+    @State private var activeTag: Int? = nil
+    @State private var isPasswordHidden = true
+    @State private var isConfirmPasswordHidden = true
+
+    private let nameTag = 2001
+    private let emailTag = 2002
+    private let passwordTag = 2003
+    private let confirmPasswordTag = 2004
 
     // MARK: - Body
 
@@ -49,6 +57,10 @@ struct SignUpView: View {
                 .padding(UIConstants.Padding.section)
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -82,14 +94,16 @@ struct SignUpView: View {
             Image("Brand")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 44)
+                .frame(height: 56)
+                .padding(.top, UIConstants.Spacing.xl)
+                .padding(.bottom, UIConstants.Spacing.xl)
 
             Text("Get Started")
-                .font(.system(size: 34, weight: .bold))
+                .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(AppTheme.Colors.budgeAuthTextPrimary)
 
             Text("Take Control of Your Money. Stay on Budget.")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
                 .multilineTextAlignment(.center)
         }
@@ -98,64 +112,22 @@ struct SignUpView: View {
 
     private func formSection(_ viewModel: AuthViewModel) -> some View {
         VStack(spacing: UIConstants.Spacing.md) {
-            FormTextField(
-                label: "",
-                text: Binding(
-                    get: { viewModel.name },
-                    set: { viewModel.name = $0 }
-                ),
-                placeholder: "Full Name",
-                icon: "person.fill",
-                textContentType: .name,
-                isRequired: true,
-                validationMessage: viewModel.nameError
-            )
+            nameField(viewModel)
             .onChange(of: viewModel.name) { _, _ in
                 viewModel.validateName()
             }
 
-            FormTextField(
-                label: "",
-                text: Binding(
-                    get: { viewModel.email },
-                    set: { viewModel.email = $0 }
-                ),
-                placeholder: "Email",
-                icon: "envelope.fill",
-                keyboardType: .emailAddress,
-                textContentType: .emailAddress,
-                autocapitalizationType: .none,
-                isRequired: true,
-                validationMessage: viewModel.emailError
-            )
+            emailField(viewModel)
             .onChange(of: viewModel.email) { _, _ in
                 viewModel.validateEmail()
             }
 
-            FormSecureField(
-                label: "",
-                text: Binding(
-                    get: { viewModel.password },
-                    set: { viewModel.password = $0 }
-                ),
-                placeholder: "Password",
-                isRequired: true,
-                validationMessage: viewModel.passwordError
-            )
+            passwordField(viewModel)
             .onChange(of: viewModel.password) { _, _ in
                 viewModel.validatePassword()
             }
 
-            FormSecureField(
-                label: "",
-                text: Binding(
-                    get: { viewModel.confirmPassword },
-                    set: { viewModel.confirmPassword = $0 }
-                ),
-                placeholder: "Confirm Password",
-                isRequired: true,
-                validationMessage: viewModel.confirmPasswordError
-            )
+            confirmPasswordField(viewModel)
             .onChange(of: viewModel.confirmPassword) { _, _ in
                 viewModel.validateConfirmPassword()
             }
@@ -164,6 +136,178 @@ struct SignUpView: View {
             passwordRequirements
 
         }
+    }
+
+    private func nameField(_ viewModel: AuthViewModel) -> some View {
+        authTextField(
+            icon: "person.fill",
+            tag: nameTag,
+            nextTag: emailTag,
+            placeholder: "Full Name",
+            text: Binding(get: { viewModel.name }, set: { viewModel.name = $0 }),
+            keyboardType: .default,
+            textContentType: .name,
+            returnKeyType: .next,
+            validationMessage: viewModel.nameError
+        )
+    }
+
+    private func emailField(_ viewModel: AuthViewModel) -> some View {
+        authTextField(
+            icon: "envelope.fill",
+            tag: emailTag,
+            nextTag: passwordTag,
+            placeholder: "Email",
+            text: Binding(get: { viewModel.email }, set: { viewModel.email = $0 }),
+            keyboardType: .emailAddress,
+            textContentType: .emailAddress,
+            returnKeyType: .next,
+            autocapitalizationType: .none,
+            validationMessage: viewModel.emailError
+        )
+    }
+
+    private func passwordField(_ viewModel: AuthViewModel) -> some View {
+        authSecureField(
+            tag: passwordTag,
+            nextTag: confirmPasswordTag,
+            placeholder: "Password",
+            text: Binding(get: { viewModel.password }, set: { viewModel.password = $0 }),
+            isHidden: $isPasswordHidden,
+            returnKeyType: .next,
+            validationMessage: viewModel.passwordError
+        )
+    }
+
+    private func confirmPasswordField(_ viewModel: AuthViewModel) -> some View {
+        authSecureField(
+            tag: confirmPasswordTag,
+            nextTag: nil,
+            placeholder: "Confirm Password",
+            text: Binding(get: { viewModel.confirmPassword }, set: { viewModel.confirmPassword = $0 }),
+            isHidden: $isConfirmPasswordHidden,
+            returnKeyType: .go,
+            validationMessage: viewModel.confirmPasswordError,
+            onSubmit: {
+                Task { await submitSignUp(viewModel) }
+            }
+        )
+    }
+
+    private func authTextField(
+        icon: String,
+        tag: Int,
+        nextTag: Int?,
+        placeholder: String,
+        text: Binding<String>,
+        keyboardType: UIKeyboardType,
+        textContentType: UITextContentType?,
+        returnKeyType: UIReturnKeyType,
+        autocapitalizationType: UITextAutocapitalizationType = .sentences,
+        validationMessage: String?
+    ) -> some View {
+        VStack(alignment: .leading, spacing: UIConstants.Spacing.xs) {
+            HStack(spacing: UIConstants.Spacing.sm) {
+                Image(systemName: icon)
+                    .foregroundStyle((activeTag == tag || !text.wrappedValue.isEmpty) ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
+                    .frame(width: UIConstants.IconSize.medium)
+
+                ChainedTextField(
+                    text: text,
+                    placeholder: placeholder,
+                    tag: tag,
+                    nextTag: nextTag,
+                    keyboardType: keyboardType,
+                    textContentType: textContentType,
+                    autocapitalizationType: autocapitalizationType,
+                    isSecureTextEntry: false,
+                    returnKeyType: returnKeyType,
+                    onSubmit: nil,
+                    onBeginEditing: { activeTag = tag },
+                    onEndEditing: { if activeTag == tag { activeTag = nil } }
+                )
+            }
+            .padding(.horizontal, UIConstants.Spacing.md)
+            .frame(height: UIConstants.ButtonSize.medium)
+            .background(
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                    .fill(AppTheme.Colors.budgeAuthCard)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                    .stroke(borderColor(isActive: activeTag == tag, hasText: !text.wrappedValue.isEmpty, validationMessage: validationMessage), lineWidth: UIConstants.Border.standard)
+            )
+
+            if let validationMessage {
+                Text(validationMessage)
+                    .font(AppTheme.Typography.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func authSecureField(
+        tag: Int,
+        nextTag: Int?,
+        placeholder: String,
+        text: Binding<String>,
+        isHidden: Binding<Bool>,
+        returnKeyType: UIReturnKeyType,
+        validationMessage: String?,
+        onSubmit: (() -> Void)? = nil
+    ) -> some View {
+        VStack(alignment: .leading, spacing: UIConstants.Spacing.xs) {
+            HStack(spacing: UIConstants.Spacing.sm) {
+                Image(systemName: "lock.fill")
+                    .foregroundStyle((activeTag == tag || !text.wrappedValue.isEmpty) ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
+                    .frame(width: UIConstants.IconSize.medium)
+
+                ChainedTextField(
+                    text: text,
+                    placeholder: placeholder,
+                    tag: tag,
+                    nextTag: nextTag,
+                    keyboardType: .default,
+                    textContentType: .password,
+                    autocapitalizationType: .none,
+                    isSecureTextEntry: isHidden.wrappedValue,
+                    returnKeyType: returnKeyType,
+                    onSubmit: onSubmit,
+                    onBeginEditing: { activeTag = tag },
+                    onEndEditing: { if activeTag == tag { activeTag = nil } }
+                )
+
+                Button {
+                    isHidden.wrappedValue.toggle()
+                    HapticService.shared.lightImpact()
+                } label: {
+                    Image(systemName: isHidden.wrappedValue ? "eye.slash.fill" : "eye.fill")
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
+                }
+            }
+            .padding(.horizontal, UIConstants.Spacing.md)
+            .frame(height: UIConstants.ButtonSize.medium)
+            .background(
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                    .fill(AppTheme.Colors.budgeAuthCard)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                    .stroke(borderColor(isActive: activeTag == tag, hasText: !text.wrappedValue.isEmpty, validationMessage: validationMessage), lineWidth: UIConstants.Border.standard)
+            )
+
+            if let validationMessage {
+                Text(validationMessage)
+                    .font(AppTheme.Typography.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func borderColor(isActive: Bool, hasText: Bool, validationMessage: String?) -> Color {
+        if validationMessage != nil { return .red }
+        if hasText || isActive { return AppTheme.Colors.budgeGreenPrimary }
+        return AppTheme.Colors.budgeAuthBorder
     }
 
     private var passwordRequirements: some View {
@@ -206,11 +350,18 @@ struct SignUpView: View {
 
     private func signUpButton(_ viewModel: AuthViewModel) -> some View {
         PrimaryLoadingButton("Next") {
-            if await viewModel.signUp() {
-                dismiss()
-            }
+            await submitSignUp(viewModel)
         }
         .disabled(!agreedToTerms || !viewModel.isSignUpFormValid)
+    }
+
+    @MainActor
+    private func submitSignUp(_ viewModel: AuthViewModel) async {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        guard agreedToTerms else { return }
+        if await viewModel.signUp() {
+            dismiss()
+        }
     }
 
     private var loginSection: some View {

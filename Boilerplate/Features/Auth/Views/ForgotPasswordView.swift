@@ -9,6 +9,9 @@ struct ForgotPasswordView: View {
     @State private var didSend = false
     @State private var showToast = false
     @State private var toastMessage: String?
+    @State private var activeTag: Int? = nil
+
+    private let emailTag = 3001
 
     var body: some View {
         ZStack {
@@ -28,6 +31,10 @@ struct ForgotPasswordView: View {
                 )
                 .padding(UIConstants.Padding.section)
             }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -58,14 +65,16 @@ struct ForgotPasswordView: View {
             Image("Brand")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 44)
+                .frame(height: 56)
+                .padding(.top, UIConstants.Spacing.xl)
+                .padding(.bottom, UIConstants.Spacing.xl)
 
             Text("Forgot Password")
-                .font(.system(size: 34, weight: .bold))
+                .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(AppTheme.Colors.budgeAuthTextPrimary)
 
             Text("Enter your email to receive a password reset link.")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
                 .multilineTextAlignment(.center)
         }
@@ -74,19 +83,7 @@ struct ForgotPasswordView: View {
 
     private func formSection(_ viewModel: AuthViewModel) -> some View {
         VStack(spacing: UIConstants.Spacing.md) {
-            FormTextField(
-                label: "Email",
-                text: Binding(
-                    get: { viewModel.email },
-                    set: { viewModel.email = $0 }
-                ),
-                placeholder: "Enter your email",
-                icon: "envelope.fill",
-                keyboardType: .emailAddress,
-                textContentType: .emailAddress,
-                autocapitalizationType: .none,
-                validationMessage: viewModel.emailError
-            )
+            emailField(viewModel)
             .onChange(of: viewModel.email) { _, _ in
                 viewModel.validateEmail()
             }
@@ -98,15 +95,70 @@ struct ForgotPasswordView: View {
             }
 
             PrimaryLoadingButton("Send Reset Link") {
-                if await viewModel.forgotPassword() {
-                    didSend = true
-                    // Match web flow: return to login after success.
-                    dismiss()
-                    router.present(sheet: .login)
-                }
+                await submitReset(viewModel)
             }
             .disabled(viewModel.email.isEmpty || viewModel.emailError != nil)
             .padding(.top, UIConstants.Spacing.md)
+        }
+    }
+
+    private func emailField(_ viewModel: AuthViewModel) -> some View {
+        VStack(alignment: .leading, spacing: UIConstants.Spacing.xs) {
+            HStack(spacing: UIConstants.Spacing.sm) {
+                Image(systemName: "envelope.fill")
+                    .foregroundStyle((activeTag == emailTag || !viewModel.email.isEmpty) ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
+                    .frame(width: UIConstants.IconSize.medium)
+
+                ChainedTextField(
+                    text: Binding(get: { viewModel.email }, set: { viewModel.email = $0 }),
+                    placeholder: "Enter your email",
+                    tag: emailTag,
+                    nextTag: nil,
+                    keyboardType: .emailAddress,
+                    textContentType: .emailAddress,
+                    autocapitalizationType: .none,
+                    isSecureTextEntry: false,
+                    returnKeyType: .go,
+                    onSubmit: {
+                        Task { await submitReset(viewModel) }
+                    },
+                    onBeginEditing: { activeTag = emailTag },
+                    onEndEditing: { if activeTag == emailTag { activeTag = nil } }
+                )
+            }
+            .padding(.horizontal, UIConstants.Spacing.md)
+            .frame(height: UIConstants.ButtonSize.medium)
+            .background(
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                    .fill(AppTheme.Colors.budgeAuthCard)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                    .stroke(borderColor(hasText: !viewModel.email.isEmpty, isActive: activeTag == emailTag, validationMessage: viewModel.emailError), lineWidth: UIConstants.Border.standard)
+            )
+
+            if let msg = viewModel.emailError {
+                Text(msg)
+                    .font(AppTheme.Typography.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func borderColor(hasText: Bool, isActive: Bool, validationMessage: String?) -> Color {
+        if validationMessage != nil { return .red }
+        if hasText || isActive { return AppTheme.Colors.budgeGreenPrimary }
+        return AppTheme.Colors.budgeAuthBorder
+    }
+
+    @MainActor
+    private func submitReset(_ viewModel: AuthViewModel) async {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        if await viewModel.forgotPassword() {
+            didSend = true
+            // Match web flow: return to login after success.
+            dismiss()
+            router.present(sheet: .login)
         }
     }
 }

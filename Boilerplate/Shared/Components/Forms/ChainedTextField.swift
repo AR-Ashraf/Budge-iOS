@@ -17,6 +17,16 @@ struct ChainedTextField: UIViewRepresentable {
             parent.text = textField.text ?? ""
         }
 
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            guard let onBeginEditing = parent.onBeginEditing else { return }
+            DispatchQueue.main.async { onBeginEditing() }
+        }
+
+        func textFieldDidEndEditing(_ textField: UITextField) {
+            guard let onEndEditing = parent.onEndEditing else { return }
+            DispatchQueue.main.async { onEndEditing() }
+        }
+
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             if let nextTag = parent.nextTag,
                let next = textField.window?.viewWithTag(nextTag) as? UITextField {
@@ -41,6 +51,8 @@ struct ChainedTextField: UIViewRepresentable {
     var isSecureTextEntry: Bool = false
     var returnKeyType: UIReturnKeyType = .default
     var onSubmit: (() -> Void)?
+    var onBeginEditing: (() -> Void)?
+    var onEndEditing: (() -> Void)?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
