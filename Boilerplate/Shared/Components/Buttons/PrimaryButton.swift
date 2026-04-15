@@ -27,7 +27,7 @@ struct PrimaryButton: View {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(.circular)
-                        .tint(.white)
+                        .tint(AppTheme.Colors.budgeGreenDarkText)
                 } else {
                     if let icon {
                         Image(systemName: icon)
@@ -37,12 +37,12 @@ struct PrimaryButton: View {
                         .font(AppTheme.Typography.buttonLabel)
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(AppTheme.Colors.budgeGreenDarkText)
             .frame(maxWidth: isFullWidth ? .infinity : nil)
             .frame(height: UIConstants.ButtonSize.medium)
             .padding(.horizontal, isFullWidth ? 0 : UIConstants.Spacing.lg)
             .background(
-                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.pill)
                     .fill(backgroundColor)
             )
         }
@@ -55,7 +55,7 @@ struct PrimaryButton: View {
         if !isEnabled {
             return .gray
         }
-        return .accentColor
+        return AppTheme.Colors.budgeGreenPrimary
     }
 }
 

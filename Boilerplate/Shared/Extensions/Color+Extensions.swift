@@ -102,13 +102,6 @@ extension Color {
         return luminance > 0.5 ? .black : .white
     }
 
-    // MARK: - Opacity
-
-    /// Return the color with modified opacity
-    func opacity(_ value: Double) -> Color {
-        self.opacity(value)
-    }
-
     // MARK: - Random
 
     /// Generate a random color

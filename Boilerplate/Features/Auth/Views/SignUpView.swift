@@ -12,11 +12,15 @@ struct SignUpView: View {
 
     @State private var viewModel: AuthViewModel?
     @State private var agreedToTerms = false
+    @State private var showToast = false
+    @State private var toastMessage: String?
 
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            AppTheme.Colors.budgeAuthBackground.ignoresSafeArea()
+
             ScrollView {
                 VStack(spacing: UIConstants.Spacing.xl) {
                     // Header
@@ -38,22 +42,35 @@ struct SignUpView: View {
                     // Login link
                     loginSection
                 }
+                .cardStyleMinimal(
+                    backgroundColor: AppTheme.Colors.budgeAuthCard,
+                    cornerRadius: UIConstants.CornerRadius.extraLarge
+                )
                 .padding(UIConstants.Padding.section)
             }
-            .navigationTitle("Create Account")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
                 }
             }
-            .loadingOverlay(viewModel?.isLoading ?? false)
         }
+        .loadingOverlay(viewModel?.isLoading ?? false)
+        .preferredColorScheme(.light)
+        .toastOverlay(kind: .error, message: toastMessage, isPresented: $showToast)
         .onAppear {
             if viewModel == nil {
                 viewModel = AuthViewModel(authService: authService)
+            }
+        }
+        .onChange(of: viewModel?.generalError) { _, newValue in
+            guard let newValue, !newValue.isEmpty else { return }
+            toastMessage = newValue
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showToast = true
             }
         }
     }
@@ -62,17 +79,19 @@ struct SignUpView: View {
 
     private var headerSection: some View {
         VStack(spacing: UIConstants.Spacing.sm) {
-            Image("BudgeLogo")
+            Image("Brand")
                 .resizable()
                 .scaledToFit()
                 .frame(height: 44)
 
-            Text("Join Us")
-                .font(AppTheme.Typography.title)
+            Text("Get Started")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(AppTheme.Colors.budgeAuthTextPrimary)
 
-            Text("Create an account to get started")
-                .font(AppTheme.Typography.body)
-                .foregroundStyle(AppTheme.Colors.secondaryText)
+            Text("Take Control of Your Money. Stay on Budget.")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
+                .multilineTextAlignment(.center)
         }
         .padding(.bottom, UIConstants.Spacing.lg)
     }
@@ -80,12 +99,12 @@ struct SignUpView: View {
     private func formSection(_ viewModel: AuthViewModel) -> some View {
         VStack(spacing: UIConstants.Spacing.md) {
             FormTextField(
-                label: "Name",
+                label: "",
                 text: Binding(
                     get: { viewModel.name },
                     set: { viewModel.name = $0 }
                 ),
-                placeholder: "Enter your name",
+                placeholder: "Full Name",
                 icon: "person.fill",
                 textContentType: .name,
                 isRequired: true,
@@ -96,16 +115,16 @@ struct SignUpView: View {
             }
 
             FormTextField(
-                label: "Email",
+                label: "",
                 text: Binding(
                     get: { viewModel.email },
                     set: { viewModel.email = $0 }
                 ),
-                placeholder: "Enter your email",
+                placeholder: "Email",
                 icon: "envelope.fill",
                 keyboardType: .emailAddress,
                 textContentType: .emailAddress,
-                autocapitalization: .never,
+                autocapitalizationType: .none,
                 isRequired: true,
                 validationMessage: viewModel.emailError
             )
@@ -114,12 +133,12 @@ struct SignUpView: View {
             }
 
             FormSecureField(
-                label: "Password",
+                label: "",
                 text: Binding(
                     get: { viewModel.password },
                     set: { viewModel.password = $0 }
                 ),
-                placeholder: "Create a password",
+                placeholder: "Password",
                 isRequired: true,
                 validationMessage: viewModel.passwordError
             )
@@ -128,12 +147,12 @@ struct SignUpView: View {
             }
 
             FormSecureField(
-                label: "Confirm Password",
+                label: "",
                 text: Binding(
                     get: { viewModel.confirmPassword },
                     set: { viewModel.confirmPassword = $0 }
                 ),
-                placeholder: "Confirm your password",
+                placeholder: "Confirm Password",
                 isRequired: true,
                 validationMessage: viewModel.confirmPasswordError
             )
@@ -144,31 +163,11 @@ struct SignUpView: View {
             // Password requirements
             passwordRequirements
 
-            // Error message
-            if let error = viewModel.generalError {
-                ErrorBanner(message: error) {
-                    viewModel.resetForm()
-                }
-            }
         }
     }
 
     private var passwordRequirements: some View {
-        VStack(alignment: .leading, spacing: UIConstants.Spacing.xs) {
-            Text("Password must contain:")
-                .font(AppTheme.Typography.caption)
-                .foregroundStyle(AppTheme.Colors.secondaryText)
-
-            Group {
-                requirementRow("At least 8 characters", met: (viewModel?.password.count ?? 0) >= 8)
-                requirementRow("One uppercase letter", met: viewModel?.password.range(of: "[A-Z]", options: .regularExpression) != nil)
-                requirementRow("One lowercase letter", met: viewModel?.password.range(of: "[a-z]", options: .regularExpression) != nil)
-                requirementRow("One number", met: viewModel?.password.range(of: "[0-9]", options: .regularExpression) != nil)
-            }
-        }
-        .padding(UIConstants.Spacing.md)
-        .background(AppTheme.Colors.tertiaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium))
+        EmptyView()
     }
 
     private func requirementRow(_ text: String, met: Bool) -> some View {
@@ -206,7 +205,7 @@ struct SignUpView: View {
     }
 
     private func signUpButton(_ viewModel: AuthViewModel) -> some View {
-        PrimaryLoadingButton("Create Account") {
+        PrimaryLoadingButton("Next") {
             if await viewModel.signUp() {
                 dismiss()
             }
@@ -215,17 +214,18 @@ struct SignUpView: View {
     }
 
     private var loginSection: some View {
-        HStack {
+        VStack(spacing: UIConstants.Spacing.sm) {
             Text("Already have an account?")
-                .foregroundStyle(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.budgeAuthTextPrimary)
+                .font(.system(size: 14, weight: .semibold))
 
-            Button("Sign In") {
+            Button("Login") {
                 dismiss()
                 router.present(sheet: .login)
             }
-            .fontWeight(.semibold)
+            .buttonStyle(.primary)
+            .frame(height: 32)
         }
-        .font(AppTheme.Typography.subheadline)
         .padding(.top, UIConstants.Spacing.md)
     }
 }

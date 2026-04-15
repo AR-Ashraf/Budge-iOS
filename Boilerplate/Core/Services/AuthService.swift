@@ -1,4 +1,5 @@
 import Foundation
+import FirebaseCore
 import FirebaseAuth
 import FirebaseFirestore
 
@@ -22,9 +23,23 @@ final class AuthService {
     /// Last authentication error
     private(set) var error: AuthError?
 
+    private var didStart = false
+
     // MARK: - Initialization
 
     init(apiClient: APIClient) {
+        // Important: Do NOT touch FirebaseAuth here. SwiftUI App init can run before
+        // AppDelegate finished configuring Firebase, which triggers noisy warnings.
+    }
+
+    // MARK: - Public Methods
+
+    /// Start observing Firebase auth state. Safe to call multiple times.
+    /// Call this after Firebase has been configured (AppDelegate didFinishLaunching).
+    func start() {
+        if didStart { return }
+        didStart = true
+
         Auth.auth().addStateDidChangeListener { [weak self] _, firebaseUser in
             guard let self else { return }
             Task { @MainActor in
@@ -37,10 +52,9 @@ final class AuthService {
         }
     }
 
-    // MARK: - Public Methods
-
     /// Check whether an email already has a sign-in method configured.
     func checkEmailExists(_ email: String) async throws -> Bool {
+        if FirebaseApp.app() == nil { FirebaseBootstrap.configureIfNeeded() }
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let methods = try await Auth.auth().fetchSignInMethods(forEmail: normalizedEmail)
         return !methods.isEmpty
@@ -49,6 +63,7 @@ final class AuthService {
     /// Sign in with email and password
     @MainActor
     func signIn(email: String, password: String) async throws {
+        if FirebaseApp.app() == nil { FirebaseBootstrap.configureIfNeeded() }
         isLoading = true
         error = nil
 
@@ -84,6 +99,7 @@ final class AuthService {
     /// Sign up with name, email, and password
     @MainActor
     func signUp(name: String, email: String, password: String) async throws {
+        if FirebaseApp.app() == nil { FirebaseBootstrap.configureIfNeeded() }
         isLoading = true
         error = nil
 
@@ -136,6 +152,7 @@ final class AuthService {
     /// Send a password reset email.
     @MainActor
     func sendPasswordReset(email: String) async throws {
+        if FirebaseApp.app() == nil { FirebaseBootstrap.configureIfNeeded() }
         isLoading = true
         error = nil
         defer { isLoading = false }

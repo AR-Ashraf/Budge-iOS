@@ -43,6 +43,10 @@ final class HapticService {
     }
 
     private func setupEngine() {
+        #if targetEnvironment(simulator)
+        // CoreHaptics frequently fails in Simulator; avoid noisy logs/timeouts.
+        return
+        #endif
         guard supportsHaptics else { return }
 
         do {
@@ -66,6 +70,9 @@ final class HapticService {
     }
 
     private func restartEngine() {
+        #if targetEnvironment(simulator)
+        return
+        #endif
         guard supportsHaptics else { return }
 
         do {

@@ -7,9 +7,13 @@ struct ForgotPasswordView: View {
 
     @State private var viewModel: AuthViewModel?
     @State private var didSend = false
+    @State private var showToast = false
+    @State private var toastMessage: String?
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            AppTheme.Colors.budgeAuthBackground.ignoresSafeArea()
+
             ScrollView {
                 VStack(spacing: UIConstants.Spacing.xl) {
                     headerSection
@@ -18,37 +22,51 @@ struct ForgotPasswordView: View {
                         formSection(viewModel)
                     }
                 }
+                .cardStyleMinimal(
+                    backgroundColor: AppTheme.Colors.budgeAuthCard,
+                    cornerRadius: UIConstants.CornerRadius.extraLarge
+                )
                 .padding(UIConstants.Padding.section)
             }
-            .navigationTitle("Forgot Password")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-            .loadingOverlay(viewModel?.isLoading ?? false)
         }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+        }
+        .loadingOverlay(viewModel?.isLoading ?? false)
+        .preferredColorScheme(.light)
+        .toastOverlay(kind: .error, message: toastMessage, isPresented: $showToast)
         .onAppear {
             if viewModel == nil {
                 viewModel = AuthViewModel(authService: authService)
+            }
+        }
+        .onChange(of: viewModel?.generalError) { _, newValue in
+            guard let newValue, !newValue.isEmpty else { return }
+            toastMessage = newValue
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showToast = true
             }
         }
     }
 
     private var headerSection: some View {
         VStack(spacing: UIConstants.Spacing.sm) {
-            Image("BudgeLogo")
+            Image("Brand")
                 .resizable()
                 .scaledToFit()
                 .frame(height: 44)
 
-            Text("Reset your password")
-                .font(AppTheme.Typography.title)
+            Text("Forgot Password")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(AppTheme.Colors.budgeAuthTextPrimary)
 
             Text("Enter your email to receive a password reset link.")
-                .font(AppTheme.Typography.body)
-                .foregroundStyle(AppTheme.Colors.secondaryText)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(.bottom, UIConstants.Spacing.lg)
@@ -66,18 +84,11 @@ struct ForgotPasswordView: View {
                 icon: "envelope.fill",
                 keyboardType: .emailAddress,
                 textContentType: .emailAddress,
-                autocapitalization: .never,
+                autocapitalizationType: .none,
                 validationMessage: viewModel.emailError
             )
             .onChange(of: viewModel.email) { _, _ in
                 viewModel.validateEmail()
-            }
-
-            if let error = viewModel.generalError {
-                ErrorBanner(message: error) {
-                    didSend = false
-                    viewModel.resetForm()
-                }
             }
 
             if didSend {

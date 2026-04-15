@@ -8,12 +8,12 @@ struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(AppTheme.Typography.buttonLabel)
-            .foregroundStyle(.white)
+            .foregroundStyle(AppTheme.Colors.budgeGreenDarkText)
             .frame(maxWidth: .infinity)
             .frame(height: UIConstants.ButtonSize.medium)
             .background(
-                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
-                    .fill(isEnabled ? Color.accentColor : Color.gray)
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.pill)
+                    .fill(isEnabled ? AppTheme.Colors.budgeGreenPrimary : Color.gray)
             )
             .opacity(configuration.isPressed ? 0.8 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
@@ -29,12 +29,12 @@ struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(AppTheme.Typography.buttonLabel)
-            .foregroundStyle(isEnabled ? Color.accentColor : Color.gray)
+            .foregroundStyle(isEnabled ? AppTheme.Colors.budgeAuthTextSecondary : Color.gray)
             .frame(maxWidth: .infinity)
             .frame(height: UIConstants.ButtonSize.medium)
             .background(
-                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
-                    .stroke(isEnabled ? Color.accentColor : Color.gray, lineWidth: UIConstants.Border.standard)
+                RoundedRectangle(cornerRadius: UIConstants.CornerRadius.pill)
+                    .stroke(isEnabled ? AppTheme.Colors.budgeAuthBorder : Color.gray, lineWidth: UIConstants.Border.standard)
             )
             .opacity(configuration.isPressed ? 0.8 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)

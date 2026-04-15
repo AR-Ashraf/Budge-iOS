@@ -11,7 +11,7 @@ struct FormTextField: View {
     var icon: String?
     var keyboardType: UIKeyboardType = .default
     var textContentType: UITextContentType?
-    var autocapitalization: TextInputAutocapitalization = .sentences
+    var autocapitalizationType: UITextAutocapitalizationType = .sentences
     var isRequired: Bool = false
     var validationMessage: String?
     var helpText: String?
@@ -24,31 +24,23 @@ struct FormTextField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: UIConstants.Spacing.xs) {
-            // Label
-            HStack(spacing: UIConstants.Spacing.xs) {
-                Text(label)
-                    .font(AppTheme.Typography.subheadline)
-                    .foregroundStyle(AppTheme.Colors.text)
-
-                if isRequired {
-                    Text("*")
-                        .foregroundStyle(.red)
-                }
-            }
-
             // Text field
             HStack(spacing: UIConstants.Spacing.sm) {
                 if let icon {
                     Image(systemName: icon)
-                        .foregroundStyle(isFocused ? .accentColor : AppTheme.Colors.secondaryText)
+                        .foregroundStyle((isFocused || !text.isEmpty) ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
                         .frame(width: UIConstants.IconSize.medium)
                 }
 
-                TextField(placeholder, text: $text)
-                    .keyboardType(keyboardType)
-                    .textContentType(textContentType)
-                    .textInputAutocapitalization(autocapitalization)
-                    .focused($isFocused)
+                NoAssistantTextField(
+                    text: $text,
+                    placeholder: placeholder.isEmpty ? label : placeholder,
+                    keyboardType: keyboardType,
+                    textContentType: textContentType,
+                    autocapitalizationType: autocapitalizationType,
+                    isSecureTextEntry: false
+                )
+                .focused($isFocused)
 
                 if !text.isEmpty {
                     Button {
@@ -64,7 +56,7 @@ struct FormTextField: View {
             .frame(height: UIConstants.ButtonSize.medium)
             .background(
                 RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
-                    .fill(AppTheme.Colors.secondaryBackground)
+                    .fill(AppTheme.Colors.budgeAuthCard)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
@@ -90,10 +82,13 @@ struct FormTextField: View {
         if validationMessage != nil {
             return .red
         }
-        if isFocused {
-            return .accentColor
+        if !text.isEmpty {
+            return AppTheme.Colors.budgeGreenPrimary
         }
-        return .clear
+        if isFocused {
+            return AppTheme.Colors.budgeGreenPrimary
+        }
+        return AppTheme.Colors.budgeAuthBorder
     }
 }
 
@@ -117,32 +112,33 @@ struct FormSecureField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: UIConstants.Spacing.xs) {
-            // Label
-            HStack(spacing: UIConstants.Spacing.xs) {
-                Text(label)
-                    .font(AppTheme.Typography.subheadline)
-                    .foregroundStyle(AppTheme.Colors.text)
-
-                if isRequired {
-                    Text("*")
-                        .foregroundStyle(.red)
-                }
-            }
-
             // Secure field
             HStack(spacing: UIConstants.Spacing.sm) {
                 Image(systemName: "lock.fill")
-                    .foregroundStyle(isFocused ? .accentColor : AppTheme.Colors.secondaryText)
+                    .foregroundStyle((isFocused || !text.isEmpty) ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
                     .frame(width: UIConstants.IconSize.medium)
 
                 Group {
                     if isSecure {
-                        SecureField(placeholder, text: $text)
+                        NoAssistantTextField(
+                            text: $text,
+                            placeholder: placeholder.isEmpty ? label : placeholder,
+                            keyboardType: .default,
+                            textContentType: .password,
+                            autocapitalizationType: .none,
+                            isSecureTextEntry: true
+                        )
                     } else {
-                        TextField(placeholder, text: $text)
+                        NoAssistantTextField(
+                            text: $text,
+                            placeholder: placeholder.isEmpty ? label : placeholder,
+                            keyboardType: .default,
+                            textContentType: .password,
+                            autocapitalizationType: .none,
+                            isSecureTextEntry: false
+                        )
                     }
                 }
-                .textContentType(.password)
                 .focused($isFocused)
 
                 Button {
@@ -157,7 +153,7 @@ struct FormSecureField: View {
             .frame(height: UIConstants.ButtonSize.medium)
             .background(
                 RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
-                    .fill(AppTheme.Colors.secondaryBackground)
+                    .fill(AppTheme.Colors.budgeAuthCard)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
@@ -179,10 +175,13 @@ struct FormSecureField: View {
         if validationMessage != nil {
             return .red
         }
-        if isFocused {
-            return .accentColor
+        if !text.isEmpty {
+            return AppTheme.Colors.budgeGreenPrimary
         }
-        return .clear
+        if isFocused {
+            return AppTheme.Colors.budgeGreenPrimary
+        }
+        return AppTheme.Colors.budgeAuthBorder
     }
 }
 
@@ -198,7 +197,7 @@ struct FormSecureField: View {
                 icon: "envelope.fill",
                 keyboardType: .emailAddress,
                 textContentType: .emailAddress,
-                autocapitalization: .never,
+                autocapitalizationType: .none,
                 isRequired: true
             )
 

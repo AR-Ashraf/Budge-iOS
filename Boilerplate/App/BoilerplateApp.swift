@@ -6,6 +6,8 @@ import SwiftUI
 struct BoilerplateApp: App {
     // MARK: - Dependencies
 
+    @UIApplicationDelegateAdaptor(FirebaseAppDelegate.self) private var firebaseAppDelegate
+
     private let router = Router.shared
     private let apiClient = APIClient()
     private let authService: AuthService
@@ -14,9 +16,6 @@ struct BoilerplateApp: App {
     // MARK: - Initialization
 
     init() {
-        if FirebaseApp.app() == nil {
-            FirebaseApp.configure()
-        }
         authService = AuthService(apiClient: apiClient)
         configureAppearance()
     }
@@ -38,6 +37,13 @@ struct BoilerplateApp: App {
 
     private func configureAppearance() {
         // Configure global appearance settings
+        // Disable input assistant bar to avoid AutoLayout warnings on focus.
+        let emptyGroups: [UIBarButtonItemGroup] = []
+        UITextField.appearance().inputAssistantItem.leadingBarButtonGroups = emptyGroups
+        UITextField.appearance().inputAssistantItem.trailingBarButtonGroups = emptyGroups
+        UITextView.appearance().inputAssistantItem.leadingBarButtonGroups = emptyGroups
+        UITextView.appearance().inputAssistantItem.trailingBarButtonGroups = emptyGroups
+
         #if DEBUG
         Logger.shared.app("App launched in \(AppEnvironment.current.rawValue) mode")
         #endif
@@ -68,6 +74,11 @@ struct RootView: View {
         .sheet(item: $router.presentedSheet) { sheet in
             sheetView(for: sheet)
         }
+        .task {
+            // Ensure Firebase is configured and auth listener is started after app launch.
+            FirebaseBootstrap.configureIfNeeded()
+            authService.start()
+        }
     }
 
     @ViewBuilder
@@ -90,13 +101,16 @@ struct RootView: View {
 
     @ViewBuilder
     private func sheetView(for sheet: Sheet) -> some View {
-        switch sheet {
-        case .login:
-            LoginView()
-        case .signUp:
-            SignUpView()
-        case .forgotPassword:
-            ForgotPasswordView()
+        // Wrap sheets in a single NavigationStack to avoid nested NavigationStacks
+        NavigationStack {
+            switch sheet {
+            case .login:
+                LoginView()
+            case .signUp:
+                SignUpView()
+            case .forgotPassword:
+                ForgotPasswordView()
+            }
         }
     }
 }

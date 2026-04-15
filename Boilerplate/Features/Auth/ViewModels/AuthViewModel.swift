@@ -56,8 +56,13 @@ final class AuthViewModel {
     }
 
     func validatePassword() {
-        let result = FormValidation.validatePassword(password)
-        passwordError = result.message
+        // Match web parity: minimal password rules enforced by Firebase
+        // (web requires >= 6 and a special char; we keep iOS lightweight here)
+        if password.count < 6 {
+            passwordError = "Password must be at least 6 characters"
+        } else {
+            passwordError = nil
+        }
     }
 
     func validateConfirmPassword() {

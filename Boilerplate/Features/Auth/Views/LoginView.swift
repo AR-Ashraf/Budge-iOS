@@ -11,11 +11,15 @@ struct LoginView: View {
     // MARK: - State
 
     @State private var viewModel: AuthViewModel?
+    @State private var showToast = false
+    @State private var toastMessage: String?
 
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            AppTheme.Colors.budgeAuthBackground.ignoresSafeArea()
+
             ScrollView {
                 VStack(spacing: UIConstants.Spacing.xl) {
                     // Header
@@ -35,22 +39,31 @@ struct LoginView: View {
                     // Sign up link
                     signUpSection
                 }
+                .cardStyleMinimal(
+                    backgroundColor: AppTheme.Colors.budgeAuthCard,
+                    cornerRadius: UIConstants.CornerRadius.extraLarge
+                )
                 .padding(UIConstants.Padding.section)
             }
-            .navigationTitle("Sign In")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-            .loadingOverlay(viewModel?.isLoading ?? false)
         }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // no toolbar actions on login (match web)
+        }
+        .loadingOverlay(viewModel?.isLoading ?? false)
+        .preferredColorScheme(.light)
+        .toastOverlay(kind: .error, message: toastMessage, isPresented: $showToast)
         .onAppear {
             if viewModel == nil {
                 viewModel = AuthViewModel(authService: authService)
+            }
+        }
+        .onChange(of: viewModel?.generalError) { _, newValue in
+            guard let newValue, !newValue.isEmpty else { return }
+            toastMessage = newValue
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showToast = true
             }
         }
     }
@@ -59,17 +72,20 @@ struct LoginView: View {
 
     private var headerSection: some View {
         VStack(spacing: UIConstants.Spacing.sm) {
-            Image("BudgeLogo")
+            Image("Brand")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 44)
+                .frame(height: 56)
+                .padding(.bottom, UIConstants.Spacing.xl)
 
-            Text("Welcome Back")
-                .font(AppTheme.Typography.title)
+            Text("Welcome")
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(AppTheme.Colors.budgeAuthTextPrimary)
 
-            Text("Sign in to continue")
-                .font(AppTheme.Typography.body)
-                .foregroundStyle(AppTheme.Colors.secondaryText)
+            Text("Take Control of Your Money. Stay on Budget.")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
+                .multilineTextAlignment(.center)
         }
         .padding(.bottom, UIConstants.Spacing.lg)
     }
@@ -77,16 +93,16 @@ struct LoginView: View {
     private func formSection(_ viewModel: AuthViewModel) -> some View {
         VStack(spacing: UIConstants.Spacing.md) {
             FormTextField(
-                label: "Email",
+                label: "",
                 text: Binding(
                     get: { viewModel.email },
                     set: { viewModel.email = $0 }
                 ),
-                placeholder: "Enter your email",
+                placeholder: "Email",
                 icon: "envelope.fill",
                 keyboardType: .emailAddress,
                 textContentType: .emailAddress,
-                autocapitalization: .never,
+                autocapitalizationType: .none,
                 validationMessage: viewModel.emailError
             )
             .onChange(of: viewModel.email) { _, _ in
@@ -94,37 +110,30 @@ struct LoginView: View {
             }
 
             FormSecureField(
-                label: "Password",
+                label: "",
                 text: Binding(
                     get: { viewModel.password },
                     set: { viewModel.password = $0 }
                 ),
-                placeholder: "Enter your password",
+                placeholder: "Password",
                 validationMessage: viewModel.passwordError
             )
 
             // Forgot password
-            HStack {
-                Spacer()
-                Button("Forgot Password?") {
-                    router.present(sheet: .forgotPassword)
-                }
-                .font(AppTheme.Typography.subheadline)
+            Button("Forgot Password?") {
+                router.present(sheet: .forgotPassword)
             }
-
-            // Error message
-            if let error = viewModel.generalError {
-                ErrorBanner(message: error) {
-                    viewModel.resetForm()
-                }
-            }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
+            .frame(maxWidth: .infinity, alignment: .center)
 
             // Login button
-            PrimaryLoadingButton("Sign In") {
+            PrimaryLoadingButton("Enter to Budge") {
                 if await viewModel.login() {
                     dismiss()
                 }
             }
+            .disabled(viewModel.email.isEmpty || viewModel.password.isEmpty)
             .padding(.top, UIConstants.Spacing.md)
         }
     }
@@ -149,42 +158,43 @@ struct LoginView: View {
 
     private var socialLoginSection: some View {
         VStack(spacing: UIConstants.Spacing.md) {
-            // Apple Sign In
-            Button {
-                // TODO: Implement Apple Sign In
-            } label: {
-                HStack {
-                    Image(systemName: "apple.logo")
-                    Text("Continue with Apple")
-                }
-            }
-            .buttonStyle(.secondary)
-
             // Google Sign In
             Button {
                 // TODO: Implement Google Sign In
             } label: {
                 HStack {
-                    Image(systemName: "g.circle.fill")
-                    Text("Continue with Google")
+                    Image("GoogleIcon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                    Text("Login With Google")
                 }
             }
-            .buttonStyle(.secondary)
+            .font(AppTheme.Typography.buttonLabel)
+            .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
+            .frame(maxWidth: .infinity)
+            .frame(height: UIConstants.ButtonSize.medium)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(AppTheme.Colors.budgeAuthBackground)
+            )
+            .buttonStyle(.plain)
         }
     }
 
     private var signUpSection: some View {
-        HStack {
-            Text("Don't have an account?")
-                .foregroundStyle(AppTheme.Colors.secondaryText)
+        VStack(spacing: UIConstants.Spacing.sm) {
+            Text("You don’t have any Budge Account?")
+                .foregroundStyle(AppTheme.Colors.budgeAuthTextPrimary)
+                .font(.system(size: 14, weight: .semibold))
 
-            Button("Sign Up") {
+            Button("Register") {
                 dismiss()
                 router.present(sheet: .signUp)
             }
-            .fontWeight(.semibold)
+            .buttonStyle(.primary)
+            .frame(height: 32)
         }
-        .font(AppTheme.Typography.subheadline)
         .padding(.top, UIConstants.Spacing.md)
     }
 }

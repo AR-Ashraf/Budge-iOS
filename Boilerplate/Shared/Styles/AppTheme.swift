@@ -9,6 +9,15 @@ enum AppTheme {
         static let primary = Color.accentColor
         static let secondary = Color.secondary
 
+        // Budge (web parity) tokens for unauth (light only)
+        static let budgeAuthBackground = Color(hex: "#F5F5F7") // primary.light
+        static let budgeAuthCard = Color(hex: "#FFFFFF") // secondary.light
+        static let budgeAuthTextPrimary = Color(hex: "#163300") // text.primary.light
+        static let budgeAuthTextSecondary = Color(hex: "#163300") // text.100.light
+        static let budgeAuthBorder = Color(hex: "#D2D2D780") // border.primary.light
+        static let budgeGreenPrimary = Color(hex: "#71C635") // brandGreenPrimary
+        static let budgeGreenDarkText = Color(hex: "#163300") // brandGreenDarkText
+
         // Background colors
         static let background = Color(uiColor: .systemBackground)
         static let secondaryBackground = Color(uiColor: .secondarySystemBackground)
