@@ -1,7 +1,7 @@
 import Foundation
 
 /// Generic loading state for async operations
-enum LoadingState<T: Equatable>: Equatable {
+enum LoadingState<T> {
     case idle
     case loading
     case loaded(T)
@@ -49,8 +49,20 @@ enum LoadingState<T: Equatable>: Equatable {
         return nil
     }
 
-    // MARK: - Equatable
+}
 
+// MARK: - Convenience Extensions
+
+extension LoadingState where T == Void {
+    /// Success state for void operations
+    static var success: LoadingState<Void> {
+        .loaded(())
+    }
+}
+
+// MARK: - Equatable (when the value is Equatable)
+
+extension LoadingState: Equatable where T: Equatable {
     static func == (lhs: LoadingState<T>, rhs: LoadingState<T>) -> Bool {
         switch (lhs, rhs) {
         case (.idle, .idle):
@@ -64,15 +76,6 @@ enum LoadingState<T: Equatable>: Equatable {
         default:
             return false
         }
-    }
-}
-
-// MARK: - Convenience Extensions
-
-extension LoadingState where T == Void {
-    /// Success state for void operations
-    static var success: LoadingState<Void> {
-        .loaded(())
     }
 }
 

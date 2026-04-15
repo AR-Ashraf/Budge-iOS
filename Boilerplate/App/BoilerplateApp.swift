@@ -1,3 +1,4 @@
+import FirebaseCore
 import SwiftData
 import SwiftUI
 
@@ -13,6 +14,9 @@ struct BoilerplateApp: App {
     // MARK: - Initialization
 
     init() {
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
         authService = AuthService(apiClient: apiClient)
         configureAppearance()
     }
@@ -53,10 +57,8 @@ struct RootView: View {
             Group {
                 if authService.isAuthenticated {
                     HomeView()
-                } else if UserDefaultsWrapper.hasCompletedOnboarding {
-                    LoginView()
                 } else {
-                    OnboardingView()
+                    LoginView()
                 }
             }
             .navigationDestination(for: Route.self) { route in
@@ -93,6 +95,8 @@ struct RootView: View {
             LoginView()
         case .signUp:
             SignUpView()
+        case .forgotPassword:
+            ForgotPasswordView()
         }
     }
 }
@@ -129,7 +133,7 @@ struct OnboardingView: View {
 
             Image(systemName: "star.fill")
                 .font(.system(size: 80))
-                .foregroundStyle(.accent)
+                .foregroundStyle(Color.accentColor)
 
             Text("Welcome to Boilerplate")
                 .font(.largeTitle)

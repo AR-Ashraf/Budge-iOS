@@ -127,6 +127,28 @@ final class AuthViewModel {
         }
     }
 
+    @MainActor
+    func forgotPassword() async -> Bool {
+        clearErrors()
+        validateEmail()
+        guard emailError == nil, !email.isEmpty else { return false }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await authService.sendPasswordReset(email: email)
+            Logger.shared.auth("Password reset email sent", level: .info)
+            return true
+        } catch let error as AuthError {
+            generalError = error.localizedDescription
+            return false
+        } catch {
+            generalError = error.localizedDescription
+            return false
+        }
+    }
+
     func resetForm() {
         email = ""
         password = ""

@@ -62,9 +62,10 @@ struct SignUpView: View {
 
     private var headerSection: some View {
         VStack(spacing: UIConstants.Spacing.sm) {
-            Image(systemName: "person.badge.plus.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(.accentColor)
+            Image("BudgeLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 44)
 
             Text("Join Us")
                 .font(AppTheme.Typography.title)

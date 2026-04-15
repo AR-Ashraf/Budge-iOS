@@ -64,21 +64,21 @@ struct SecondaryButton: View {
 
 #Preview {
     VStack(spacing: 16) {
-        SecondaryButton(title: "Cancel") {
+        SecondaryButton(title: "Cancel", action: {
             print("Tapped")
-        }
+        })
 
-        SecondaryButton(title: "Add Item", icon: "plus") {
+        SecondaryButton(title: "Add Item", action: {
             print("Tapped")
-        }
+        }, icon: "plus")
 
-        SecondaryButton(title: "Loading", isLoading: true) {
+        SecondaryButton(title: "Loading", action: {
             print("Tapped")
-        }
+        }, isLoading: true)
 
-        SecondaryButton(title: "Disabled") {
+        SecondaryButton(title: "Disabled", action: {
             print("Tapped")
-        }
+        })
         .disabled(true)
     }
     .padding()

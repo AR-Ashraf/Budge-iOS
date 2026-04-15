@@ -63,26 +63,26 @@ struct PrimaryButton: View {
 
 #Preview {
     VStack(spacing: 16) {
-        PrimaryButton(title: "Continue") {
+        PrimaryButton(title: "Continue", action: {
             print("Tapped")
-        }
+        })
 
-        PrimaryButton(title: "Submit", icon: "paperplane.fill") {
+        PrimaryButton(title: "Submit", action: {
             print("Tapped")
-        }
+        }, icon: "paperplane.fill")
 
-        PrimaryButton(title: "Loading", isLoading: true) {
+        PrimaryButton(title: "Loading", action: {
             print("Tapped")
-        }
+        }, isLoading: true)
 
-        PrimaryButton(title: "Disabled") {
+        PrimaryButton(title: "Disabled", action: {
             print("Tapped")
-        }
+        })
         .disabled(true)
 
-        PrimaryButton(title: "Compact", isFullWidth: false) {
+        PrimaryButton(title: "Compact", action: {
             print("Tapped")
-        }
+        }, isFullWidth: false)
     }
     .padding()
 }

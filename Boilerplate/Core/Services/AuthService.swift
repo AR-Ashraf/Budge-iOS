@@ -1,7 +1,9 @@
 import Foundation
+import FirebaseAuth
+import FirebaseFirestore
 
 /// Authentication service managing user session state
-/// Handles login, logout, token management, and user state
+/// Handles Firebase login/signup/logout, and user state hydration
 @Observable
 final class AuthService {
     // MARK: - Properties
@@ -20,24 +22,29 @@ final class AuthService {
     /// Last authentication error
     private(set) var error: AuthError?
 
-    // MARK: - Dependencies
-
-    private let apiClient: APIClient
-    private let keychain: KeychainManager
-
     // MARK: - Initialization
 
-    init(apiClient: APIClient, keychain: KeychainManager = .shared) {
-        self.apiClient = apiClient
-        self.keychain = keychain
+    init(apiClient: APIClient) {
+        Auth.auth().addStateDidChangeListener { [weak self] _, firebaseUser in
+            guard let self else { return }
+            Task { @MainActor in
+                await self.hydrateUser(firebaseUser)
+            }
+        }
 
-        // Try to restore session on init
-        Task {
-            await restoreSession()
+        Task { @MainActor in
+            await hydrateUser(Auth.auth().currentUser)
         }
     }
 
     // MARK: - Public Methods
+
+    /// Check whether an email already has a sign-in method configured.
+    func checkEmailExists(_ email: String) async throws -> Bool {
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let methods = try await Auth.auth().fetchSignInMethods(forEmail: normalizedEmail)
+        return !methods.isEmpty
+    }
 
     /// Sign in with email and password
     @MainActor
@@ -48,21 +55,23 @@ final class AuthService {
         defer { isLoading = false }
 
         do {
-            let response: AuthResponse = try await apiClient.request(.login(email: email, password: password))
+            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let result = try await Auth.auth().signIn(withEmail: normalizedEmail, password: password)
 
-            // Save tokens
-            try keychain.saveString(response.accessToken, for: KeychainManager.Keys.accessToken)
-            try keychain.saveString(response.refreshToken, for: KeychainManager.Keys.refreshToken)
+            guard result.user.isEmailVerified else {
+                try? Auth.auth().signOut()
+                let authError = AuthError.emailNotVerified
+                self.error = authError
+                throw authError
+            }
 
-            // Update API client with token
-            apiClient.setAuthToken(response.accessToken, refresh: response.refreshToken)
-
-            // Update current user
-            currentUser = User(from: response.user)
-
-            Logger.shared.auth("User signed in: \(response.user.email)", level: .info)
-        } catch let apiError as APIError {
-            let authError = AuthError.from(apiError)
+            await hydrateUser(result.user)
+            Logger.shared.auth("User signed in: \(normalizedEmail)", level: .info)
+        } catch let err as AuthError {
+            error = err
+            throw err
+        } catch let err as NSError {
+            let authError = AuthError.fromFirebase(err)
             error = authError
             throw authError
         } catch {
@@ -81,21 +90,75 @@ final class AuthService {
         defer { isLoading = false }
 
         do {
-            let response: AuthResponse = try await apiClient.request(.signUp(name: name, email: email, password: password))
+            let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
-            // Save tokens
-            try keychain.saveString(response.accessToken, for: KeychainManager.Keys.accessToken)
-            try keychain.saveString(response.refreshToken, for: KeychainManager.Keys.refreshToken)
+            if try await checkEmailExists(normalizedEmail) {
+                let authError = AuthError.emailAlreadyExists
+                self.error = authError
+                throw authError
+            }
 
-            // Update API client with token
-            apiClient.setAuthToken(response.accessToken, refresh: response.refreshToken)
+            let result = try await Auth.auth().createUser(withEmail: normalizedEmail, password: password)
 
-            // Update current user
-            currentUser = User(from: response.user)
+            let changeRequest = result.user.createProfileChangeRequest()
+            changeRequest.displayName = trimmedName
+            try await changeRequest.commitChanges()
 
-            Logger.shared.auth("User signed up: \(response.user.email)", level: .info)
-        } catch let apiError as APIError {
-            let authError = AuthError.from(apiError)
+            try await result.user.sendEmailVerification()
+
+            let userDoc: [String: Any] = [
+                "email": normalizedEmail,
+                "name": trimmedName,
+                "createdAt": FieldValue.serverTimestamp()
+            ]
+            try await Firestore.firestore().collection("users").document(result.user.uid).setData(userDoc, merge: true)
+
+            // Mirror web behavior: user signs up, verifies email, then logs in.
+            try? Auth.auth().signOut()
+            currentUser = nil
+
+            Logger.shared.auth("User signed up: \(normalizedEmail)", level: .info)
+        } catch let err as AuthError {
+            error = err
+            throw err
+        } catch let err as NSError {
+            let authError = AuthError.fromFirebase(err)
+            error = authError
+            throw authError
+        } catch {
+            let authError = AuthError.unknown(error.localizedDescription)
+            self.error = authError
+            throw authError
+        }
+    }
+
+    /// Send a password reset email.
+    @MainActor
+    func sendPasswordReset(email: String) async throws {
+        isLoading = true
+        error = nil
+        defer { isLoading = false }
+
+        do {
+            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+            guard try await checkEmailExists(normalizedEmail) else {
+                let authError = AuthError.accountNotFound
+                self.error = authError
+                throw authError
+            }
+
+            let settings = ActionCodeSettings()
+            settings.url = URL(string: "https://app.mybudge.ai/auth-action")
+            settings.handleCodeInApp = false
+
+            try await Auth.auth().sendPasswordReset(withEmail: normalizedEmail, actionCodeSettings: settings)
+        } catch let err as AuthError {
+            error = err
+            throw err
+        } catch let err as NSError {
+            let authError = AuthError.fromFirebase(err)
             error = authError
             throw authError
         } catch {
@@ -110,53 +173,42 @@ final class AuthService {
     func signOut() async {
         // Clear local state first
         currentUser = nil
-        apiClient.clearAuthToken()
-
-        // Clear keychain
-        try? keychain.delete(for: KeychainManager.Keys.accessToken)
-        try? keychain.delete(for: KeychainManager.Keys.refreshToken)
-
-        // Notify server (fire and forget)
-        Task {
-            try? await apiClient.request(.logout) as Data
-        }
+        try? Auth.auth().signOut()
 
         Logger.shared.auth("User signed out", level: .info)
     }
 
-    /// Refresh the current user's data
     @MainActor
-    func refreshUser() async throws {
-        guard isAuthenticated else { return }
-
-        let response: UserResponse = try await apiClient.request(.getCurrentUser)
-        currentUser = User(from: response)
-    }
-
-    // MARK: - Private Methods
-
-    /// Restore session from stored tokens
-    @MainActor
-    private func restoreSession() async {
-        guard let accessToken = try? keychain.loadString(for: KeychainManager.Keys.accessToken),
-              let refreshToken = try? keychain.loadString(for: KeychainManager.Keys.refreshToken) else {
-            Logger.shared.auth("No stored session found", level: .debug)
+    private func hydrateUser(_ firebaseUser: FirebaseAuth.User?) async {
+        guard let firebaseUser else {
+            currentUser = nil
             return
         }
 
-        apiClient.setAuthToken(accessToken, refresh: refreshToken)
+        let uid = firebaseUser.uid
+        let email = firebaseUser.email ?? ""
+        var name = firebaseUser.displayName ?? ""
+        var createdAt: Date? = nil
 
         do {
-            let response: UserResponse = try await apiClient.request(.getCurrentUser)
-            currentUser = User(from: response)
-            Logger.shared.auth("Session restored for: \(response.email)", level: .info)
+            let snap = try await Firestore.firestore().collection("users").document(uid).getDocument()
+            if let data = snap.data() {
+                if name.isEmpty, let storedName = data["name"] as? String { name = storedName }
+                if let ts = data["createdAt"] as? Timestamp { createdAt = ts.dateValue() }
+            }
         } catch {
-            // Token expired or invalid - clear it
-            apiClient.clearAuthToken()
-            try? keychain.delete(for: KeychainManager.Keys.accessToken)
-            try? keychain.delete(for: KeychainManager.Keys.refreshToken)
-            Logger.shared.auth("Failed to restore session: \(error)", level: .warning)
+            // Non-fatal; we can proceed with FirebaseAuth fields.
         }
+
+        if name.isEmpty { name = email }
+
+        currentUser = User(
+            id: uid,
+            name: name,
+            email: email,
+            avatarURL: nil,
+            createdAt: createdAt
+        )
     }
 }
 
@@ -166,6 +218,8 @@ enum AuthError: Error, LocalizedError {
     case invalidCredentials
     case emailAlreadyExists
     case weakPassword
+    case emailNotVerified
+    case accountNotFound
     case networkError
     case serverError
     case unknown(String)
@@ -178,6 +232,10 @@ enum AuthError: Error, LocalizedError {
             return "An account with this email already exists."
         case .weakPassword:
             return "Password is too weak. Please use a stronger password."
+        case .emailNotVerified:
+            return "Email is not verified. Please check and verify your email before logging in."
+        case .accountNotFound:
+            return "Account not found. Please sign up first."
         case .networkError:
             return "Network connection failed. Please check your internet."
         case .serverError:
@@ -187,20 +245,20 @@ enum AuthError: Error, LocalizedError {
         }
     }
 
-    static func from(_ apiError: APIError) -> AuthError {
-        switch apiError {
-        case .unauthorized:
+    static func fromFirebase(_ error: NSError) -> AuthError {
+        // FirebaseAuth errors are surfaced as NSError with a code.
+        // Map common cases to match the web app's UX.
+        switch AuthErrorCode(_nsError: error).code {
+        case .wrongPassword, .invalidEmail, .userNotFound, .invalidCredential:
             return .invalidCredentials
-        case .conflict:
+        case .emailAlreadyInUse:
             return .emailAlreadyExists
-        case .badRequest(let message) where message?.contains("password") == true:
+        case .weakPassword:
             return .weakPassword
-        case .networkUnavailable:
+        case .networkError:
             return .networkError
-        case .serverError:
-            return .serverError
         default:
-            return .unknown(apiError.localizedDescription)
+            return .unknown(error.localizedDescription)
         }
     }
 }

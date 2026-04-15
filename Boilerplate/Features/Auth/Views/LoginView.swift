@@ -59,9 +59,10 @@ struct LoginView: View {
 
     private var headerSection: some View {
         VStack(spacing: UIConstants.Spacing.sm) {
-            Image(systemName: "person.circle.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(.accentColor)
+            Image("BudgeLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 44)
 
             Text("Welcome Back")
                 .font(AppTheme.Typography.title)
@@ -106,7 +107,7 @@ struct LoginView: View {
             HStack {
                 Spacer()
                 Button("Forgot Password?") {
-                    // TODO: Navigate to forgot password
+                    router.present(sheet: .forgotPassword)
                 }
                 .font(AppTheme.Typography.subheadline)
             }

@@ -1,0 +1,109 @@
+name: Budge
+options:
+  bundleIdPrefix: com.devscore
+  deploymentTarget:
+    iOS: "17.0"
+  minimumXcodeGenVersion: "2.45.0"
+
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk.git
+    from: 10.0.0
+
+settings:
+  base:
+    PRODUCT_BUNDLE_IDENTIFIER: com.devscore.budge
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""
+    INFOPLIST_FILE: Budge/Resources/Info.plist
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+targets:
+  Budge:
+    type: application
+    platform: iOS
+    sources:
+      - path: ../Boilerplate
+      - path: Budge/Resources
+      - path: Budge/Assets.xcassets
+    preBuildScripts:
+      - name: "Auto-regenerate Xcode project (XcodeGen)"
+        basedOnDependencyAnalysis: false
+        script: |
+          set -euo pipefail
+
+          ROOT_DIR="${SRCROOT}"
+          SPEC_FILE="${ROOT_DIR}/project.yml"
+          PROJECT_FILE="${ROOT_DIR}/Budge.xcodeproj/project.pbxproj"
+          XCODEGEN_BIN="${ROOT_DIR}/../tools/xcodegen/xcodegen/bin/xcodegen"
+
+          # Avoid recursion / parallel regenerations.
+          LOCK_FILE="/tmp/budge_xcodegen.lock"
+          if [ -f "${LOCK_FILE}" ]; then
+            exit 0
+          fi
+
+          # If the project doesn't exist yet, generate it.
+          if [ ! -f "${PROJECT_FILE}" ]; then
+            touch "${LOCK_FILE}"
+            trap 'rm -f "${LOCK_FILE}"' EXIT
+            "${XCODEGEN_BIN}" generate --spec "${SPEC_FILE}"
+            exit 0
+          fi
+
+          # Regenerate only if:
+          # - project.yml changed, OR
+          # - any Swift file under sources changed since last generation.
+          NEEDS_REGEN=0
+          if [ "${SPEC_FILE}" -nt "${PROJECT_FILE}" ]; then
+            NEEDS_REGEN=1
+          fi
+
+          if [ "${NEEDS_REGEN}" -eq 0 ]; then
+            if /usr/bin/find "${ROOT_DIR}/../Boilerplate" "${ROOT_DIR}/Budge" -type f -name "*.swift" -newer "${PROJECT_FILE}" -print -quit | /usr/bin/grep -q .; then
+              NEEDS_REGEN=1
+            fi
+          fi
+
+          if [ "${NEEDS_REGEN}" -eq 1 ]; then
+            touch "${LOCK_FILE}"
+            trap 'rm -f "${LOCK_FILE}"' EXIT
+            "${XCODEGEN_BIN}" generate --spec "${SPEC_FILE}"
+          fi
+    dependencies:
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+    settings:
+      base:
+        PRODUCT_NAME: Budge
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        ENABLE_PREVIEWS: YES
+    info:
+      path: Budge/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Budge
+        CFBundleName: Budge
+        UILaunchScreen:
+          UIColorName: ""
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    scheme:
+      testTargets:
+        - BudgeTests
+
+  BudgeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ../BoilerplateTests
+    dependencies:
+      - target: Budge
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.devscore.budge.tests
+

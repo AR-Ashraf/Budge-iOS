@@ -54,6 +54,7 @@ enum Route: Hashable {
 enum Sheet: Identifiable {
     case login
     case signUp
+    case forgotPassword
 
     var id: String {
         switch self {
@@ -61,6 +62,8 @@ enum Sheet: Identifiable {
             return "login"
         case .signUp:
             return "signUp"
+        case .forgotPassword:
+            return "forgotPassword"
         }
     }
 }

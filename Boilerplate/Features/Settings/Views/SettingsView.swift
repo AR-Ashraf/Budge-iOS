@@ -113,7 +113,7 @@ struct SettingsView: View {
 
                             Text(user.initials)
                                 .font(.headline)
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                         }
                         .frame(width: UIConstants.AvatarSize.medium, height: UIConstants.AvatarSize.medium)
 
