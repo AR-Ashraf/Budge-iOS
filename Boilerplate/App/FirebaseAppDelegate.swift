@@ -1,4 +1,5 @@
 import FirebaseCore
+import GoogleSignIn
 import UIKit
 
 final class FirebaseAppDelegate: NSObject, UIApplicationDelegate {
@@ -8,6 +9,14 @@ final class FirebaseAppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         FirebaseBootstrap.configureIfNeeded()
         return true
+    }
+
+    func application(
+        _ app: UIApplication,
+        open url: URL,
+        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    ) -> Bool {
+        GIDSignIn.sharedInstance.handle(url)
     }
 }
 

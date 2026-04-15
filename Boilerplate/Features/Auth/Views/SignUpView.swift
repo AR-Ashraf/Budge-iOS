@@ -47,6 +47,13 @@ struct SignUpView: View {
                         signUpButton(viewModel)
                     }
 
+                    // Divider + Google sign up
+                    dividerSection
+
+                    if let viewModel {
+                        googleSignUpButton(viewModel)
+                    }
+
                     // Login link
                     loginSection
                 }
@@ -353,6 +360,40 @@ struct SignUpView: View {
             await submitSignUp(viewModel)
         }
         .disabled(!agreedToTerms || !viewModel.isSignUpFormValid)
+    }
+
+    private var dividerSection: some View {
+        Rectangle()
+            .fill(AppTheme.Colors.budgeAuthBorder)
+            .frame(height: 2)
+            .padding(.vertical, 2)
+    }
+
+    private func googleSignUpButton(_ viewModel: AuthViewModel) -> some View {
+        Button {
+            Task {
+                if await viewModel.googleSignIn() {
+                    dismiss()
+                }
+            }
+        } label: {
+            HStack {
+                Image("GoogleIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                Text("Sign Up With Google")
+                    .font(AppTheme.Typography.buttonLabel)
+            }
+            .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
+            .frame(maxWidth: .infinity)
+            .frame(height: UIConstants.ButtonSize.medium)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(AppTheme.Colors.budgeAuthBackground)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     @MainActor

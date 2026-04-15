@@ -18,6 +18,7 @@
 		268B8218629B03CA3B5B00DD /* SwiftDataContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A5B6568A8AB5B7DDF26D54C /* SwiftDataContainer.swift */; };
 		279086EBB6AD243D1C132E37 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C280A1E0DF4CE00BE3471D /* SettingsViewModel.swift */; };
 		28A4F77A0044435B9ECC962D /* ExampleAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D755037AF1209DA98B2407 /* ExampleAPIService.swift */; };
+		2A7C138D767BFEE75A0CC73E /* UIApplication+TopViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C7F779A30416BC5E6DF2BE9 /* UIApplication+TopViewController.swift */; };
 		2F05077E36AB77C51A420BA1 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD61CBDBC556A970282587A4 /* APIClientTests.swift */; };
 		3214CD336EABABD0B820FA8D /* MockAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A520507391EEA8EB5780FD1 /* MockAuthService.swift */; };
 		33A4806AA7901943004D22F0 /* ExampleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7C9C99CA721AB9FF89B0A5C /* ExampleDetailView.swift */; };
@@ -46,6 +47,7 @@
 		95EDE2AB7D29EF42FA1ED5AF /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742F11AD529777DFF6E41CA5 /* AppTheme.swift */; };
 		98396C309DEC821B7F057320 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C30B4D60785869943951E0F6 /* EmptyStateView.swift */; };
 		A15A1208548AF647430100EE /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51141364E73523126CDB11F /* Toast.swift */; };
+		A1D832C3E2D0611C3AF27ED9 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 555565523EE250EA229BB204 /* FirebaseFunctions */; };
 		A46D872D57E3567B8FF7235F /* APIEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C8F08ACBF0FC1D473F9E068 /* APIEndpoint.swift */; };
 		A5736C337CA7C79145E95BC7 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AEFBE04879EE16BDF15BFE4 /* APIClient.swift */; };
 		A9BC79C0FBD9CD01C9BF2FEC /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADFFC455BD0A0E443CD776BD /* ForgotPasswordView.swift */; };
@@ -71,6 +73,7 @@
 		F691B0A3D588F5F9161B9BE4 /* Color+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43CFEF9050B4EF181B8B17DB /* Color+Extensions.swift */; };
 		F97C092400ABE6649AD1F35D /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C53C5AE3CB99DCB1F86BF84 /* Logger.swift */; };
 		FA31ACA3B5A50DCF63B2711D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = C35C31C87147D41961D21093 /* FirebaseFirestore */; };
+		FEE337BD72C1DD6D24F79F0B /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 54214337E06E7EE72CAFC5D0 /* GoogleSignIn */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -86,6 +89,7 @@
 /* Begin PBXFileReference section */
 		112FF44A24426FC67AD06258 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		1A5B6568A8AB5B7DDF26D54C /* SwiftDataContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataContainer.swift; sourceTree = "<group>"; };
+		1C7F779A30416BC5E6DF2BE9 /* UIApplication+TopViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIApplication+TopViewController.swift"; sourceTree = "<group>"; };
 		1F23F8FC6763F2B0B4D0CBE7 /* ExampleListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleListViewModel.swift; sourceTree = "<group>"; };
 		2A520507391EEA8EB5780FD1 /* MockAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockAuthService.swift; sourceTree = "<group>"; };
 		2D99BC8F4F24A30579CDCAE5 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
@@ -158,6 +162,8 @@
 			files = (
 				D6D7BECE875C5F9579A6A67F /* FirebaseAuth in Frameworks */,
 				FA31ACA3B5A50DCF63B2711D /* FirebaseFirestore in Frameworks */,
+				A1D832C3E2D0611C3AF27ED9 /* FirebaseFunctions in Frameworks */,
+				FEE337BD72C1DD6D24F79F0B /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -224,6 +230,7 @@
 				F103C177D7F992A54BB15A04 /* CGPoint+Extensions.swift */,
 				43CFEF9050B4EF181B8B17DB /* Color+Extensions.swift */,
 				5B5295A050518F1708738EBA /* Date+Extensions.swift */,
+				1C7F779A30416BC5E6DF2BE9 /* UIApplication+TopViewController.swift */,
 				6EB9BECB15C0A5180B9F31A3 /* View+Extensions.swift */,
 			);
 			path = Extensions;
@@ -578,6 +585,8 @@
 			packageProductDependencies = (
 				BE7B7DB08468A15DA78D60FD /* FirebaseAuth */,
 				C35C31C87147D41961D21093 /* FirebaseFirestore */,
+				555565523EE250EA229BB204 /* FirebaseFunctions */,
+				54214337E06E7EE72CAFC5D0 /* GoogleSignIn */,
 			);
 			productName = Budge;
 			productReference = 34CC22C8474AF5ADF2A292FD /* Budge.app */;
@@ -626,6 +635,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				EDB4414368BBCA208BC154EE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				7740D36C97BFDD44327CA597 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3964A93746D4AC918532E1DD /* Products */;
@@ -668,7 +678,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nROOT_DIR=\"${SRCROOT}\"\nSPEC_FILE=\"${ROOT_DIR}/project.yml\"\nPROJECT_FILE=\"${ROOT_DIR}/Budge.xcodeproj/project.pbxproj\"\nXCODEGEN_BIN=\"${ROOT_DIR}/../tools/xcodegen/xcodegen/bin/xcodegen\"\n\n# Avoid recursion / parallel regenerations.\nLOCK_FILE=\"/tmp/budge_xcodegen.lock\"\nif [ -f \"${LOCK_FILE}\" ]; then\n  exit 0\nfi\n\n# If the project doesn't exist yet, generate it.\nif [ ! -f \"${PROJECT_FILE}\" ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\n  exit 0\nfi\n\n# Regenerate only if:\n# - project.yml changed, OR\n# - any Swift file under sources changed since last generation.\nNEEDS_REGEN=0\nif [ \"${SPEC_FILE}\" -nt \"${PROJECT_FILE}\" ]; then\n  NEEDS_REGEN=1\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 0 ]; then\n  if /usr/bin/find \"${ROOT_DIR}/../Boilerplate\" \"${ROOT_DIR}/Budge\" -type f -name \"*.swift\" -newer \"${PROJECT_FILE}\" -print -quit | /usr/bin/grep -q .; then\n    NEEDS_REGEN=1\n  fi\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 1 ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\nfi\n";
+			shellScript = "set -euo pipefail\n\nROOT_DIR=\"/Users/ashraf/Documents/projects/Budge/ios/Budge\"\nSPEC_FILE=\"${ROOT_DIR}/project.yml\"\nPROJECT_FILE=\"${ROOT_DIR}/Budge.xcodeproj/project.pbxproj\"\nXCODEGEN_BIN=\"${ROOT_DIR}/../tools/xcodegen/xcodegen/bin/xcodegen\"\n\n# Avoid recursion / parallel regenerations.\nLOCK_FILE=\"/tmp/budge_xcodegen.lock\"\nif [ -f \"${LOCK_FILE}\" ]; then\n  exit 0\nfi\n\n# If the project doesn't exist yet, generate it.\nif [ ! -f \"${PROJECT_FILE}\" ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\n  exit 0\nfi\n\n# Regenerate only if:\n# - project.yml changed, OR\n# - any Swift file under sources changed since last generation.\nNEEDS_REGEN=0\nif [ \"${SPEC_FILE}\" -nt \"${PROJECT_FILE}\" ]; then\n  NEEDS_REGEN=1\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 0 ]; then\n  if /usr/bin/find \"${ROOT_DIR}/../Boilerplate\" \"${ROOT_DIR}/Budge\" -type f -name \"*.swift\" -newer \"${PROJECT_FILE}\" -print -quit | /usr/bin/grep -q .; then\n    NEEDS_REGEN=1\n  fi\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 1 ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -729,6 +739,7 @@
 				B10ABC58E235613D2FE469CC /* SignUpView.swift in Sources */,
 				268B8218629B03CA3B5B00DD /* SwiftDataContainer.swift in Sources */,
 				A15A1208548AF647430100EE /* Toast.swift in Sources */,
+				2A7C138D767BFEE75A0CC73E /* UIApplication+TopViewController.swift in Sources */,
 				B475A26895739694F04ABA9C /* UIConstants.swift in Sources */,
 				677C50D041AE7B4C0C5BBDEC /* User.swift in Sources */,
 				CBB2A7A76A38D9578EB2F1B6 /* UserDefaultsWrapper.swift in Sources */,
@@ -992,6 +1003,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		7740D36C97BFDD44327CA597 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
 		EDB4414368BBCA208BC154EE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
@@ -1003,6 +1022,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		54214337E06E7EE72CAFC5D0 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7740D36C97BFDD44327CA597 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		555565523EE250EA229BB204 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EDB4414368BBCA208BC154EE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
 		BE7B7DB08468A15DA78D60FD /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = EDB4414368BBCA208BC154EE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

@@ -133,6 +133,24 @@ final class AuthViewModel {
     }
 
     @MainActor
+    func googleSignIn() async -> Bool {
+        clearErrors()
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await authService.signInWithGoogle()
+            return true
+        } catch let error as AuthError {
+            generalError = error.localizedDescription
+            return false
+        } catch {
+            generalError = error.localizedDescription
+            return false
+        }
+    }
+
+    @MainActor
     func forgotPassword() async -> Bool {
         clearErrors()
         validateEmail()
@@ -146,9 +164,19 @@ final class AuthViewModel {
             Logger.shared.auth("Password reset email sent", level: .info)
             return true
         } catch let error as AuthError {
+            Logger.shared.auth("forgotPassword failed: \(error.localizedDescription)", level: .error)
             generalError = error.localizedDescription
             return false
+        } catch let error as NSError {
+            let domain = error.domain
+            let code = error.code
+            let message = error.localizedDescription
+            let details = error.userInfo["details"] ?? error.userInfo[NSLocalizedFailureReasonErrorKey] ?? error.userInfo
+            Logger.shared.auth("forgotPassword failed (NSError): domain=\(domain) code=\(code) message=\(message) details=\(details)", level: .error)
+            generalError = message
+            return false
         } catch {
+            Logger.shared.auth("forgotPassword failed: \(error.localizedDescription)", level: .error)
             generalError = error.localizedDescription
             return false
         }

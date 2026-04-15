@@ -9,6 +9,9 @@ packages:
   Firebase:
     url: https://github.com/firebase/firebase-ios-sdk.git
     from: 10.0.0
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 7.0.0
 
 settings:
   base:
@@ -77,6 +80,10 @@ targets:
         product: FirebaseAuth
       - package: Firebase
         product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseFunctions
+      - package: GoogleSignIn
+        product: GoogleSignIn
     settings:
       base:
         PRODUCT_NAME: Budge
@@ -88,6 +95,11 @@ targets:
       properties:
         CFBundleDisplayName: Budge
         CFBundleName: Budge
+        FirebaseAppDelegateProxyEnabled: false
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLSchemes:
+              - com.googleusercontent.apps.549694372536-45m3vvh7fvtqr41g0ulc8i03phbfh4k4
         UILaunchScreen:
           UIColorName: ""
         UIApplicationSceneManifest:

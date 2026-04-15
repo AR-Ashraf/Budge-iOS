@@ -31,7 +31,6 @@ final class Router {
     /// Navigate to a route (push)
     func navigate(to route: Route) {
         path.append(route)
-        Logger.shared.ui("Navigate to: \(route)", level: .debug)
     }
 
     /// Navigate to multiple routes
@@ -47,7 +46,6 @@ final class Router {
     func pop() {
         guard !path.isEmpty else { return }
         path.removeLast()
-        Logger.shared.ui("Pop navigation", level: .debug)
     }
 
     /// Go back multiple screens
@@ -59,7 +57,6 @@ final class Router {
     /// Go back to root
     func popToRoot() {
         path.removeLast(path.count)
-        Logger.shared.ui("Pop to root", level: .debug)
     }
 
     // MARK: - Sheet Presentation
@@ -67,7 +64,6 @@ final class Router {
     /// Present a sheet
     func present(sheet: Sheet) {
         presentedSheet = sheet
-        Logger.shared.ui("Present sheet: \(sheet)", level: .debug)
     }
 
     /// Dismiss current sheet
@@ -80,7 +76,6 @@ final class Router {
     /// Present a full screen cover
     func present(fullScreenCover: FullScreenCover) {
         presentedFullScreenCover = fullScreenCover
-        Logger.shared.ui("Present full screen: \(fullScreenCover)", level: .debug)
     }
 
     /// Dismiss current full screen cover

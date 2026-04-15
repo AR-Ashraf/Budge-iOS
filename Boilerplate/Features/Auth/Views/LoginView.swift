@@ -37,7 +37,9 @@ struct LoginView: View {
                     dividerSection
 
                     // Social login
-                    socialLoginSection
+                    if let viewModel {
+                        socialLoginSection(viewModel)
+                    }
 
                     // Sign up link
                     signUpSection
@@ -268,18 +270,28 @@ struct LoginView: View {
         .padding(.vertical, UIConstants.Spacing.md)
     }
 
-    private var socialLoginSection: some View {
+    private func socialLoginSection(_ viewModel: AuthViewModel) -> some View {
         VStack(spacing: UIConstants.Spacing.md) {
             // Google Sign In
             Button {
-                // TODO: Implement Google Sign In
+                Task {
+                    if await viewModel.googleSignIn() {
+                        dismiss()
+                    }
+                }
             } label: {
                 HStack {
                     Image("GoogleIcon")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 18, height: 18)
-                    Text("Login With Google")
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(AppTheme.Colors.budgeAuthTextSecondary)
+                    } else {
+                        Text("Login With Google")
+                    }
                 }
             }
             .font(AppTheme.Typography.buttonLabel)
@@ -291,6 +303,7 @@ struct LoginView: View {
                     .fill(AppTheme.Colors.budgeAuthBackground)
             )
             .buttonStyle(.plain)
+            .disabled(viewModel.isLoading)
         }
     }
 
