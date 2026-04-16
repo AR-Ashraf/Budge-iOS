@@ -25,6 +25,15 @@ struct OnboardingGateView: View {
         case initializationCompletion
     }
 
+    private let hasInitialProfile: Bool
+
+    init(initialProfile: [String: Any]? = nil) {
+        let initial = initialProfile ?? [:]
+        _profile = State(initialValue: initial)
+        _isLoading = State(initialValue: initialProfile == nil)
+        hasInitialProfile = initialProfile != nil
+    }
+
     var body: some View {
         Group {
             if let loadError {
@@ -38,10 +47,14 @@ struct OnboardingGateView: View {
             }
         }
         .task {
-            await loadProfile()
+            if !hasInitialProfile {
+                await loadProfile(showSpinner: true)
+            } else {
+                await MainActor.run { isLoading = false }
+            }
         }
         .onChange(of: authService.currentUser?.id) { _, _ in
-            Task { await loadProfile() }
+            Task { await loadProfile(showSpinner: true) }
         }
     }
 
@@ -51,14 +64,14 @@ struct OnboardingGateView: View {
             if showJourney {
                 JourneyCompletionView {
                     showJourney = false
-                    Task { await loadProfile() }
+                    Task { await loadProfile(showSpinner: false) }
                 }
-                .onAppear { logPageOnce("JourneyCompletion") }
+                .onAppear { logPageOnce(.journeyCompletion) }
             } else if preFinancialPhase == .initializationCompletion {
                 InitializationCompletionView {
                     preFinancialPhase = .none
                 }
-                .onAppear { logPageOnce("InitializationCompletion") }
+                .onAppear { logPageOnce(.initializationCompletion) }
             } else {
                 mainStep(uid: uid)
             }
@@ -71,29 +84,29 @@ struct OnboardingGateView: View {
         switch step {
         case .manageBalance:
             ManageBalanceView(onboarding: onboarding, uid: uid) {
-                await loadProfile()
+                await loadProfile(showSpinner: false)
             }
-            .onAppear { logPageOnce("ManageBalance") }
+            .onAppear { logPageOnce(.manageBalance) }
         case .budgeIntro:
             budgeFlow(uid: uid)
         case .knowPlatform:
             KnowFromPlatformView(onboarding: onboarding, uid: uid) {
-                await loadProfile()
+                await loadProfile(showSpinner: false)
             }
-            .onAppear { logPageOnce("KnowFromPlatform") }
+            .onAppear { logPageOnce(.budgeSetupKnowFromPlatform) }
         case .whyUseBudge:
             WhyUseBudgeView(onboarding: onboarding, uid: uid) {
-                await loadProfile()
+                await loadProfile(showSpinner: false)
                 await MainActor.run {
                     preFinancialPhase = .initializationCompletion
                 }
             }
-            .onAppear { logPageOnce("WhyUseBudge") }
+            .onAppear { logPageOnce(.budgeSetupWhyUseBudge) }
         case .financialSetup:
             financialFlow(uid: uid)
         case .chat:
             ChatView()
-                .onAppear { logPageOnce("Chat") }
+                .onAppear { logPageOnce(.chat) }
         }
     }
 
@@ -104,12 +117,14 @@ struct OnboardingGateView: View {
             BudgeSetupIntroView {
                 budgePhase = .userType
             }
-            .onAppear { logPageOnce("BudgeSetupIntro") }
+            .onAppear { logPageOnce(.budgeSetupIntro) }
         case .userType:
-            UserTypeView(onboarding: onboarding, uid: uid) {
-                await loadProfile()
+            UserTypeView(onboarding: onboarding, uid: uid) { selected in
+                applyLocalUserTypeSelection(selected)
+                // Optional non-blocking refresh for eventual consistency.
+                Task { await loadProfile(showSpinner: false) }
             }
-            .onAppear { logPageOnce("UserType") }
+            .onAppear { logPageOnce(.budgeSetupUserType) }
         }
     }
 
@@ -127,17 +142,17 @@ struct OnboardingGateView: View {
                     await MainActor.run {
                         financialSubStep = .postIncomeCelebration
                     }
-                    await loadProfile()
+                    await loadProfile(showSpinner: false)
                 },
                 onExpenseCompleted: {}
             )
-            .onAppear { logPageOnce("FinancialSetupIncome") }
+            .onAppear { logPageOnce(.financialSetupIncome) }
         case .postIncomeCelebration:
             FinancialSetupCompletionView {
                 OnboardingFinancialProgress.save(.expense, uid: uid)
                 financialSubStep = .expense
             }
-            .onAppear { logPageOnce("FinancialSetupCompletion") }
+            .onAppear { logPageOnce(.financialSetupCompletion) }
         case .expense:
             FinancialSetupExpenseView(
                 userType: userType,
@@ -151,12 +166,13 @@ struct OnboardingGateView: View {
                     }
                 }
             )
-            .onAppear { logPageOnce("FinancialSetupExpense") }
+            .onAppear { logPageOnce(.financialSetupExpense) }
         }
     }
 
-    private func logPageOnce(_ name: String) {
+    private func logPageOnce(_ page: OnboardingPage) {
 #if DEBUG
+        let name = page.rawValue
         guard lastLoggedPage != name else { return }
         lastLoggedPage = name
         Logger.shared.ui("Page: \(name)", level: .info)
@@ -176,7 +192,7 @@ struct OnboardingGateView: View {
                 .foregroundStyle(AppTheme.Colors.secondaryText)
                 .multilineTextAlignment(.center)
             PrimaryButton(title: "Try again", action: {
-                Task { await loadProfile() }
+                Task { await loadProfile(showSpinner: true) }
             }, isFullWidth: false)
             Spacer()
         }
@@ -185,16 +201,22 @@ struct OnboardingGateView: View {
         .background(AppTheme.Colors.background.ignoresSafeArea())
     }
 
-    private func loadProfile() async {
+    private func loadProfile(showSpinner: Bool) async {
         guard let uid = authService.currentUser?.id else {
             await MainActor.run {
                 isLoading = false
             }
             return
         }
-        await MainActor.run {
-            isLoading = true
-            loadError = nil
+        if showSpinner {
+            await MainActor.run {
+                isLoading = true
+                loadError = nil
+            }
+        } else {
+            await MainActor.run {
+                loadError = nil
+            }
         }
         do {
             let data = try await onboarding.fetchUserProfile(uid: uid)
@@ -211,5 +233,9 @@ struct OnboardingGateView: View {
                 isLoading = false
             }
         }
+    }
+
+    private func applyLocalUserTypeSelection(_ userType: OnboardingUserType) {
+        profile["userType"] = userType.rawValue
     }
 }

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SplashView: View {
+    var animate: Bool = true
     @State private var isVisible = false
 
     var body: some View {
@@ -15,7 +16,12 @@ struct SplashView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .onAppear {
-            withAnimation(.easeIn(duration: 0.45)) {
+            guard !isVisible else { return }
+            if animate {
+                withAnimation(.easeIn(duration: 0.45)) {
+                    isVisible = true
+                }
+            } else {
                 isVisible = true
             }
         }
@@ -23,6 +29,6 @@ struct SplashView: View {
 }
 
 #Preview {
-    SplashView()
+    SplashView(animate: true)
 }
 

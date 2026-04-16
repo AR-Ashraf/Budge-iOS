@@ -55,6 +55,10 @@ struct BoilerplateApp: App {
 struct RootView: View {
     @Environment(Router.self) private var router
     @Environment(AuthService.self) private var authService
+    @Environment(OnboardingService.self) private var onboarding
+
+    @State private var onboardingProfile: [String: Any]?
+    @State private var isFetchingOnboardingProfile = false
 
     var body: some View {
         @Bindable var router = router
@@ -62,9 +66,16 @@ struct RootView: View {
         NavigationStack(path: $router.path) {
             Group {
                 if !authService.hasCompletedInitialAuthCheck {
-                    SplashView()
+                    SplashView(animate: true)
                 } else if authService.isAuthenticated {
-                    OnboardingGateView()
+                    if let onboardingProfile {
+                        OnboardingGateView(initialProfile: onboardingProfile)
+                    } else {
+                        SplashView(animate: false)
+                            .task {
+                                await fetchOnboardingProfileIfNeeded()
+                            }
+                    }
                 } else {
                     LoginView()
                 }
@@ -80,6 +91,32 @@ struct RootView: View {
             // Ensure Firebase is configured and auth listener is started after app launch.
             FirebaseBootstrap.configureIfNeeded()
             authService.start()
+        }
+        .onChange(of: authService.currentUser?.id) { _, _ in
+            // Reset cached onboarding routing profile on auth user changes.
+            onboardingProfile = nil
+            Task { await fetchOnboardingProfileIfNeeded() }
+        }
+    }
+
+    private func fetchOnboardingProfileIfNeeded() async {
+        guard authService.isAuthenticated, onboardingProfile == nil else { return }
+        guard let uid = authService.currentUser?.id else { return }
+        guard !isFetchingOnboardingProfile else { return }
+
+        await MainActor.run { isFetchingOnboardingProfile = true }
+        defer { Task { @MainActor in isFetchingOnboardingProfile = false } }
+
+        do {
+            let data = try await onboarding.fetchUserProfile(uid: uid)
+            await MainActor.run {
+                onboardingProfile = data
+            }
+        } catch {
+            // If profile fetch fails, let the gate handle showing its error UI.
+            await MainActor.run {
+                onboardingProfile = [:]
+            }
         }
     }
 

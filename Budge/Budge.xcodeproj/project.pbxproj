@@ -80,6 +80,7 @@
 		D6D7BECE875C5F9579A6A67F /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = BE7B7DB08468A15DA78D60FD /* FirebaseAuth */; };
 		D9064DE61D385E694E0D97ED /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D99BC8F4F24A30579CDCAE5 /* FeatureFlags.swift */; };
 		D9F71CACBDA8904719B0CB50 /* UserTypeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BA8540F7FEEE0A3BAFBA81B /* UserTypeView.swift */; };
+		E07C0E4EF0CA513E68DE13BB /* OnboardingPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEE1559CFF6ACF15C062FEFF /* OnboardingPage.swift */; };
 		E1A10EA61E42913E0475F769 /* FormTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85466E0DCA784F8A5A081821 /* FormTextField.swift */; };
 		E447012D5355EF742F1BFB6F /* FirebaseBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B67FB2AFE01076FC7FCA5845 /* FirebaseBootstrap.swift */; };
 		EA74466902EA3306071C27C7 /* LoadingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC72E396878213B51DFE19A /* LoadingState.swift */; };
@@ -172,6 +173,7 @@
 		D82629D6E7957993D2C0FA68 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		DCBDAF8373E6B1060751C56F /* FirebaseAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseAppDelegate.swift; sourceTree = "<group>"; };
 		DE4EAF8A778FBE59BC72B354 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
+		DEE1559CFF6ACF15C062FEFF /* OnboardingPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPage.swift; sourceTree = "<group>"; };
 		DFFDC48A9E7E79BF37E828FF /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
 		E1B458CC3A980C40131F9E5A /* ChainedTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChainedTextField.swift; sourceTree = "<group>"; };
 		E25D9A77D0E7D3D88321B1BD /* LogBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogBuffer.swift; sourceTree = "<group>"; };
@@ -465,6 +467,7 @@
 				A465C963D797B7B5F4EBC386 /* OnboardingFinancialConstants.swift */,
 				64421CF5F46E635557FD4B5D /* OnboardingFinancialProgress.swift */,
 				6B2C6523658557514C270BB5 /* OnboardingGateView.swift */,
+				DEE1559CFF6ACF15C062FEFF /* OnboardingPage.swift */,
 				0344BAAAE2628101CB9EADAB /* Views */,
 			);
 			path = Onboarding;
@@ -837,6 +840,7 @@
 				D35333BCE517318FA57DEE83 /* OnboardingFinancialProgress.swift in Sources */,
 				0F69569F65A7FD734DAF7A25 /* OnboardingGateView.swift in Sources */,
 				26746430ACBB6A493B36E033 /* OnboardingOptionCard.swift in Sources */,
+				E07C0E4EF0CA513E68DE13BB /* OnboardingPage.swift in Sources */,
 				84FFEAE9F38C5CA1549D0467 /* OnboardingService.swift in Sources */,
 				00E9F6E8EC11D84FF05763B9 /* PrimaryButton.swift in Sources */,
 				540FBE530AC4055B24D11C88 /* Route.swift in Sources */,
