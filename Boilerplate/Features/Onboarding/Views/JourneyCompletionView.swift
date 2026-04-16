@@ -3,32 +3,81 @@ import SwiftUI
 struct JourneyCompletionView: View {
     let onEnterChat: () -> Void
 
+    @AppStorage("themePreference") private var themePreferenceRaw = "system"
+    @Environment(\.colorScheme) private var systemColorScheme
+
+    private var effectiveColorScheme: ColorScheme {
+        switch themePreferenceRaw {
+        case "light": return .light
+        case "dark": return .dark
+        default: return systemColorScheme
+        }
+    }
+
+    private var pageBackground: Color {
+        effectiveColorScheme == .dark ? Color(hex: "#1D1D1F") : AppTheme.Colors.budgeAuthBackground
+    }
+
+    private var pageTextPrimary: Color {
+        effectiveColorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextPrimary
+    }
+
+    private var pageTextSecondary: Color {
+        effectiveColorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextSecondary
+    }
+
+    @State private var didFire = false
+    @State private var imageLoaded = false
+    @State private var didAppear = false
+
     var body: some View {
-        VStack(spacing: UIConstants.Spacing.xl) {
-            Spacer()
+        ZStack {
+            pageBackground.ignoresSafeArea()
 
-            Image(systemName: "flag.checkered")
-                .font(.system(size: 64))
-                .foregroundStyle(AppTheme.Colors.budgeGreenPrimary)
+            VStack(spacing: 16) {
+                Spacer(minLength: 0)
 
-            VStack(spacing: UIConstants.Spacing.sm) {
-                Text("You’re all set!")
-                    .font(AppTheme.Typography.title2)
-                    .foregroundStyle(AppTheme.Colors.text)
-                Text("Jump into chat to plan your finances with Budge.")
-                    .font(AppTheme.Typography.body)
-                    .foregroundStyle(AppTheme.Colors.secondaryText)
+                ZStack {
+                    if !imageLoaded {
+                        ProgressView()
+                            .tint(AppTheme.Colors.budgeGreenPrimary)
+                            .scaleEffect(1.2)
+                    }
+
+                    Image("charecterDark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 192, height: 192)
+                        .opacity(imageLoaded ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.3), value: imageLoaded)
+                        .onAppear { imageLoaded = true }
+                }
+
+                Text("Congratulation!!")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(pageTextPrimary)
                     .multilineTextAlignment(.center)
+
+                Text("You are entering the Budge System")
+                    .font(AppTheme.Typography.body)
+                    .foregroundStyle(pageTextSecondary)
+                    .multilineTextAlignment(.center)
+
+                Spacer(minLength: 0)
             }
             .padding(.horizontal, UIConstants.Padding.section)
-
-            Spacer()
-
-            PrimaryButton(title: "Go to chat", action: onEnterChat)
-                .padding(.horizontal, UIConstants.Padding.section)
-                .padding(.bottom, UIConstants.Spacing.xl)
+            .opacity(didAppear ? 1 : 0)
+            .offset(y: didAppear ? 0 : 80)
+            .animation(.easeInOut(duration: 0.6), value: didAppear)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(AppTheme.Colors.budgeAuthBackground.ignoresSafeArea())
+        .preferredColorScheme(effectiveColorScheme)
+        .onAppear {
+            guard !didFire else { return }
+            didFire = true
+            didAppear = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                onEnterChat()
+            }
+        }
     }
 }

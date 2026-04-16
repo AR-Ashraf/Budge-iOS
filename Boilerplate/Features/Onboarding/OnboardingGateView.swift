@@ -131,13 +131,16 @@ struct OnboardingGateView: View {
     @ViewBuilder
     private func financialFlow(uid: String) -> some View {
         let userType = OnboardingUserType.fromFirestore(profile["userType"]) ?? .jobHolder
+        let currency = (profile["currency"] as? String) ?? "USD"
         switch financialSubStep {
         case .income:
             FinancialSetupIncomeView(
                 userType: userType,
                 uid: uid,
                 onboarding: onboarding,
+                currency: currency,
                 onIncomeCompleted: {
+                    // After income, show `/financial-setup/completion` interstitial first.
                     OnboardingFinancialProgress.save(.postIncomeCelebration, uid: uid)
                     await MainActor.run {
                         financialSubStep = .postIncomeCelebration
@@ -149,8 +152,10 @@ struct OnboardingGateView: View {
             .onAppear { logPageOnce(.financialSetupIncome) }
         case .postIncomeCelebration:
             FinancialSetupCompletionView {
+                // After `/financial-setup/completion`, continue to expense step.
                 OnboardingFinancialProgress.save(.expense, uid: uid)
                 financialSubStep = .expense
+                // No profile refetch needed; we already mutated the sub-step locally.
             }
             .onAppear { logPageOnce(.financialSetupCompletion) }
         case .expense:
@@ -158,12 +163,12 @@ struct OnboardingGateView: View {
                 userType: userType,
                 uid: uid,
                 onboarding: onboarding,
+                currency: currency,
                 onIncomeCompleted: {},
                 onExpenseCompleted: {
+                    // After expense completion, go to journey completion (chat).
                     OnboardingFinancialProgress.clear(uid: uid)
-                    await MainActor.run {
-                        showJourney = true
-                    }
+                    showJourney = true
                 }
             )
             .onAppear { logPageOnce(.financialSetupExpense) }

@@ -4,6 +4,7 @@ struct FinancialSetupIncomeView: View {
     let userType: OnboardingUserType
     let uid: String
     let onboarding: OnboardingService
+    let currency: String
     var onIncomeCompleted: () async -> Void
     var onExpenseCompleted: () async -> Void
 
@@ -14,6 +15,7 @@ struct FinancialSetupIncomeView: View {
             categories: income,
             uid: uid,
             onboarding: onboarding,
+            currency: currency,
             onIncomeCompleted: onIncomeCompleted,
             onExpenseCompleted: onExpenseCompleted
         )
