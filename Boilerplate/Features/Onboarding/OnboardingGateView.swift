@@ -96,11 +96,10 @@ struct OnboardingGateView: View {
             }
             .onAppear { logPageOnce(.budgeSetupKnowFromPlatform) }
         case .whyUseBudge:
-            WhyUseBudgeView(onboarding: onboarding, uid: uid) {
-                await loadProfile(showSpinner: false)
-                await MainActor.run {
-                    preFinancialPhase = .initializationCompletion
-                }
+            WhyUseBudgeView(onboarding: onboarding, uid: uid) { selected in
+                profile["usingReason"] = selected
+                Task { await loadProfile(showSpinner: false) }
+                preFinancialPhase = .initializationCompletion
             }
             .onAppear { logPageOnce(.budgeSetupWhyUseBudge) }
         case .financialSetup:
