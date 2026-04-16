@@ -90,8 +90,9 @@ struct OnboardingGateView: View {
         case .budgeIntro:
             budgeFlow(uid: uid)
         case .knowPlatform:
-            KnowFromPlatformView(onboarding: onboarding, uid: uid) {
-                await loadProfile(showSpinner: false)
+            KnowFromPlatformView(onboarding: onboarding, uid: uid) { selected in
+                profile["platform"] = selected
+                Task { await loadProfile(showSpinner: false) }
             }
             .onAppear { logPageOnce(.budgeSetupKnowFromPlatform) }
         case .whyUseBudge:
