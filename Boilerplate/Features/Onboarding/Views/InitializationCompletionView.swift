@@ -5,27 +5,54 @@ struct InitializationCompletionView: View {
     let onContinue: () -> Void
 
     @State private var didFire = false
+    @State private var imageVisible = false
+    @State private var containerOffsetY: CGFloat = 80
+    @State private var containerOpacity: Double = 0
 
     var body: some View {
-        VStack(spacing: UIConstants.Spacing.xl) {
-            Spacer()
+        VStack {
+            Spacer(minLength: 0)
 
-            Image(systemName: "hands.clap.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(AppTheme.Colors.budgeGreenPrimary)
+            VStack(spacing: 0) {
+                ZStack {
+                    if !imageVisible {
+                        ProgressView()
+                            .tint(AppTheme.Colors.budgeGreenPrimary)
+                            .scaleEffect(1.2)
+                    }
 
-            VStack(spacing: UIConstants.Spacing.sm) {
-                Text("Congratulations!!")
-                    .font(AppTheme.Typography.title2)
-                    .foregroundStyle(AppTheme.Colors.text)
-                Text("You’ve done a great job.")
-                    .font(AppTheme.Typography.body)
-                    .foregroundStyle(AppTheme.Colors.secondaryText)
+                    Image("congratulation")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 192, height: 192)
+                        .opacity(imageVisible ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.3), value: imageVisible)
+                        .onAppear { imageVisible = true }
+                }
+
+                Text(" Congratulations!!")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(AppTheme.Colors.budgeAuthTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 32)
+
+                Text("You have done a great jobs.")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 4)
             }
-            .multilineTextAlignment(.center)
             .padding(.horizontal, UIConstants.Padding.section)
+            .offset(y: containerOffsetY)
+            .opacity(containerOpacity)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    containerOffsetY = 0
+                    containerOpacity = 1
+                }
+            }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppTheme.Colors.budgeAuthBackground.ignoresSafeArea())
