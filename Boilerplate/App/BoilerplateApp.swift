@@ -11,6 +11,7 @@ struct BoilerplateApp: App {
     private let router = Router.shared
     private let apiClient = APIClient()
     private let authService: AuthService
+    private let onboardingService: OnboardingService
     private let analyticsService = AnalyticsService()
 
     // MARK: - Initialization
@@ -18,6 +19,7 @@ struct BoilerplateApp: App {
     init() {
         FirebaseBootstrap.configureIfNeeded()
         authService = AuthService(apiClient: apiClient)
+        onboardingService = OnboardingService()
         configureAppearance()
     }
 
@@ -29,6 +31,7 @@ struct BoilerplateApp: App {
                 .environment(router)
                 .environment(apiClient)
                 .environment(authService)
+                .environment(onboardingService)
                 .environment(analyticsService)
         }
         .modelContainer(SwiftDataContainer.shared)
@@ -58,8 +61,10 @@ struct RootView: View {
 
         NavigationStack(path: $router.path) {
             Group {
-                if authService.isAuthenticated {
-                    HomeView()
+                if !authService.hasCompletedInitialAuthCheck {
+                    SplashView()
+                } else if authService.isAuthenticated {
+                    OnboardingGateView()
                 } else {
                     LoginView()
                 }
@@ -93,6 +98,8 @@ struct RootView: View {
             SettingsView()
         case .profile:
             ProfileView()
+        case .onboarding:
+            OnboardingGateView()
         }
     }
 

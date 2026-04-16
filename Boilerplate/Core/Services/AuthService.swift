@@ -26,6 +26,7 @@ final class AuthService {
     private(set) var error: AuthError?
 
     private var didStart = false
+    private(set) var hasCompletedInitialAuthCheck = false
 
     // MARK: - Initialization
 
@@ -46,11 +47,17 @@ final class AuthService {
             guard let self else { return }
             Task { @MainActor in
                 await self.hydrateUser(firebaseUser)
+                if !self.hasCompletedInitialAuthCheck {
+                    self.hasCompletedInitialAuthCheck = true
+                }
             }
         }
 
         Task { @MainActor in
             await hydrateUser(Auth.auth().currentUser)
+            if !hasCompletedInitialAuthCheck {
+                hasCompletedInitialAuthCheck = true
+            }
         }
     }
 
@@ -196,7 +203,11 @@ final class AuthService {
             changeRequest.displayName = trimmedName
             try await changeRequest.commitChanges()
 
-            try await result.user.sendEmailVerification()
+            // Use a stable Firebase Hosting domain for verification links (React app may be down).
+            let settings = ActionCodeSettings()
+            settings.url = URL(string: "https://auth.mybudge.ai/verify-email")
+            settings.handleCodeInApp = false
+            try await result.user.sendEmailVerification(with: settings)
 
             let userDoc: [String: Any] = [
                 "email": normalizedEmail,

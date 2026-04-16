@@ -11,6 +11,8 @@ enum Route: Hashable {
     case exampleForm(item: ExampleItem?)
     case settings
     case profile
+    /// Post-auth onboarding (usually embedded from `RootView`; available for deep links).
+    case onboarding
 
     // MARK: - Hashable
 
@@ -30,6 +32,8 @@ enum Route: Hashable {
             hasher.combine("settings")
         case .profile:
             hasher.combine("profile")
+        case .onboarding:
+            hasher.combine("onboarding")
         }
     }
 
@@ -38,7 +42,8 @@ enum Route: Hashable {
         case (.home, .home),
              (.exampleList, .exampleList),
              (.settings, .settings),
-             (.profile, .profile):
+             (.profile, .profile),
+             (.onboarding, .onboarding):
             return true
         case (.exampleDetail(let lhsId), .exampleDetail(let rhsId)):
             return lhsId == rhsId
@@ -46,6 +51,29 @@ enum Route: Hashable {
             return lhsItem?.id == rhsItem?.id
         default:
             return false
+        }
+    }
+}
+
+extension Route: CustomStringConvertible {
+    var description: String { debugName }
+
+    var debugName: String {
+        switch self {
+        case .home:
+            return "Home"
+        case .exampleList:
+            return "ExampleList"
+        case .exampleDetail(let id):
+            return "ExampleDetail(\(id))"
+        case .exampleForm(let item):
+            return "ExampleForm(\(item?.id ?? "nil"))"
+        case .settings:
+            return "Settings"
+        case .profile:
+            return "Profile"
+        case .onboarding:
+            return "OnboardingGate"
         }
     }
 }

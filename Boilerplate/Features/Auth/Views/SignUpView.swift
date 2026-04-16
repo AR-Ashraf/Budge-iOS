@@ -101,7 +101,7 @@ struct SignUpView: View {
             Image("Brand")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 56)
+                .frame(height: 120)
                 .padding(.top, UIConstants.Spacing.xl)
                 .padding(.bottom, UIConstants.Spacing.xl)
 

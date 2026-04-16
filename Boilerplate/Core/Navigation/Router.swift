@@ -30,6 +30,9 @@ final class Router {
 
     /// Navigate to a route (push)
     func navigate(to route: Route) {
+#if DEBUG
+        Logger.shared.ui("Page: \(route.debugName)", level: .info)
+#endif
         path.append(route)
     }
 
