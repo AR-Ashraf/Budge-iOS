@@ -76,16 +76,9 @@ struct UserTypeView: View {
 
         // Background persistence (web parity: do not block UI / routing).
         Task.detached(priority: .utility) {
-            // 1) Best-effort persist userType.
+            // Best-effort persist userType + seed financial docs so gate can skip setup.
             do { try await onboarding.updateUserProfile(uid: uid, fields: ["userType": userType.rawValue]) } catch {}
-
-            // 2) Best-effort conditional seeding; only if nothing exists yet.
-            do {
-                let (inc, exp) = try await onboarding.fetchFinancialCategoriesCount(uid: uid)
-                if inc == 0, exp == 0 {
-                    try await onboarding.seedFinancialCategoryDocuments(uid: uid, userType: userType)
-                }
-            } catch {}
+            do { try await onboarding.seedZeroBudgetsAndMarkFinancialData(uid: uid, userType: userType) } catch {}
         }
     }
 }

@@ -99,7 +99,6 @@ struct OnboardingGateView: View {
             WhyUseBudgeView(onboarding: onboarding, uid: uid) { selected in
                 profile["usingReason"] = selected
                 Task { await loadProfile(showSpinner: false) }
-                preFinancialPhase = .initializationCompletion
             }
             .onAppear { logPageOnce(.budgeSetupWhyUseBudge) }
         case .financialSetup:
@@ -121,8 +120,7 @@ struct OnboardingGateView: View {
         case .userType:
             UserTypeView(onboarding: onboarding, uid: uid) { selected in
                 applyLocalUserTypeSelection(selected)
-                // Optional non-blocking refresh for eventual consistency.
-                Task { await loadProfile(showSpinner: false) }
+                // Do not refetch here; routing is driven by local state for instant jump to chat.
             }
             .onAppear { logPageOnce(.budgeSetupUserType) }
         }
@@ -168,6 +166,7 @@ struct OnboardingGateView: View {
                 onExpenseCompleted: {
                     // After expense completion, go to journey completion (chat).
                     OnboardingFinancialProgress.clear(uid: uid)
+                    profile["hasFinancialData"] = true
                     showJourney = true
                 }
             )
@@ -242,5 +241,6 @@ struct OnboardingGateView: View {
 
     private func applyLocalUserTypeSelection(_ userType: OnboardingUserType) {
         profile["userType"] = userType.rawValue
+        profile["hasFinancialData"] = true
     }
 }

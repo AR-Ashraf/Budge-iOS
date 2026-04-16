@@ -130,6 +130,29 @@ final class OnboardingService {
         try await updateUserProfile(uid: uid, fields: ["hasFinancialData": value])
     }
 
+    /// React parity: after `userType` selection, seed categories (if needed), seed 0 budgets, and mark `hasFinancialData=true`.
+    func seedZeroBudgetsAndMarkFinancialData(uid: String, userType: OnboardingUserType) async throws {
+        // Ensure financial types exist.
+        let (incCount, expCount) = try await fetchFinancialCategoriesCount(uid: uid)
+        if incCount == 0, expCount == 0 {
+            try await seedFinancialCategoryDocuments(uid: uid, userType: userType)
+        }
+
+        let (income, expense) = OnboardingFinancialConstants.categories(for: userType)
+        let year = Self.currentBudgetYear
+        let monthKey = Self.currentBudgetMonthKey
+
+        let incomeZero = Dictionary(uniqueKeysWithValues: income.map { ($0.key, 0.0) })
+        let expenseZero = Dictionary(uniqueKeysWithValues: expense.map { ($0.key, 0.0) })
+
+        // Seed 0 budgets for current month (merge=true) so docs exist.
+        try await saveBudgetAggregates(uid: uid, type: "income", year: year, amountsByKey: incomeZero, monthKey: monthKey)
+        try await saveBudgetAggregates(uid: uid, type: "expense", year: year, amountsByKey: expenseZero, monthKey: monthKey)
+
+        // Mark complete.
+        try await setHasFinancialData(uid: uid, true)
+    }
+
     /// Count financial type docs (income + expense).
     func fetchFinancialCategoriesCount(uid: String) async throws -> (income: Int, expense: Int) {
         let inc = try await db.collection("financialTypes").document(uid).collection("income").getDocuments()
@@ -142,14 +165,14 @@ final class OnboardingService {
     /// Next major step from Firestore profile (no E2EE gates).
     func nextMajorStep(from profile: [String: Any]) -> OnboardingMajorStep {
         if !hasStartingBalance(profile) { return .manageBalance }
-        if let hasFinancial = profile["hasFinancialData"] as? Bool, hasFinancial {
-            return .chat
-        }
         let userType = profile["userType"] as? String
         if userType == nil || userType?.isEmpty == true { return .budgeIntro }
         if profile["platform"] == nil || (profile["platform"] as? String)?.isEmpty == true { return .knowPlatform }
         let reason = profile["usingReason"] as? String ?? profile["whyUseBudge"] as? String
         if reason == nil || reason?.isEmpty == true { return .whyUseBudge }
+        if let hasFinancial = profile["hasFinancialData"] as? Bool, hasFinancial {
+            return .chat
+        }
         return .financialSetup
     }
 
