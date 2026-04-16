@@ -3,11 +3,14 @@ import SwiftUI
 struct ManageBalanceView: View {
     let onboarding: OnboardingService
     let uid: String
-    let onFinished: () async -> Void
+    /// Applied on the main actor before persistence so routing can advance immediately.
+    let onOptimisticContinue: (_ currencyCode: String, _ startingBalance: Double) async -> Void
+    /// Called after Firestore + callables succeed; refresh profile from server (ciphertext fields).
+    let onServerSynced: () async -> Void
 
     @State private var currency: CurrencyOption?
     @State private var balanceText = ""
-    @State private var isSaving = false
+    @State private var didSubmit = false
     @State private var errorMessage: String?
     @State private var showBalanceInfo = false
 
@@ -73,9 +76,9 @@ struct ManageBalanceView: View {
             }
 
             PrimaryButton(
-                title: isSaving ? "Saving…" : "Continue",
+                title: "Continue",
                 action: { Task { await save() } },
-                isLoading: isSaving
+                isLoading: false
             )
             .disabled(!canContinue)
             .padding(.top, UIConstants.Spacing.md)
@@ -178,7 +181,7 @@ struct ManageBalanceView: View {
     }
 
     private var canContinue: Bool {
-        if isSaving { return false }
+        if didSubmit { return false }
         guard currency != nil else { return false }
         return isValidStartingBalance()
     }
@@ -204,18 +207,25 @@ struct ManageBalanceView: View {
     private func save() async {
         errorMessage = nil
         guard let currency else { return }
+        guard !didSubmit else { return }
         let normalized = balanceText.replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespaces)
         guard let value = Double(normalized), value >= 0, !normalized.isEmpty else {
             errorMessage = "Enter a valid starting balance (0 or greater)."
             return
         }
-        isSaving = true
-        defer { isSaving = false }
-        do {
-            try await onboarding.saveManageBalance(uid: uid, startingBalance: value, currency: currency.code)
-            await onFinished()
-        } catch {
-            errorMessage = error.localizedDescription
+        didSubmit = true
+        await onOptimisticContinue(currency.code, value)
+        Task(priority: .userInitiated) {
+            do {
+                try await onboarding.saveManageBalance(uid: uid, startingBalance: value, currency: currency.code)
+                await onServerSynced()
+            } catch {
+                await MainActor.run {
+                    didSubmit = false
+                    errorMessage = error.localizedDescription
+                }
+                await onServerSynced()
+            }
         }
     }
 }

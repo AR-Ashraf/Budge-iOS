@@ -83,9 +83,19 @@ struct OnboardingGateView: View {
         let step = onboarding.nextMajorStep(from: profile)
         switch step {
         case .manageBalance:
-            ManageBalanceView(onboarding: onboarding, uid: uid) {
-                await loadProfile(showSpinner: false)
-            }
+            ManageBalanceView(
+                onboarding: onboarding,
+                uid: uid,
+                onOptimisticContinue: { currencyCode, startingBalance in
+                    await MainActor.run {
+                        profile["currency"] = currencyCode
+                        profile["startingBalance"] = startingBalance
+                    }
+                },
+                onServerSynced: {
+                    await loadProfile(showSpinner: false)
+                }
+            )
             .onAppear { logPageOnce(.manageBalance) }
         case .budgeIntro:
             budgeFlow(uid: uid)
