@@ -96,6 +96,8 @@ targets:
         CFBundleDisplayName: Budge
         CFBundleName: Budge
         FirebaseAppDelegateProxyEnabled: false
+        NSMicrophoneUsageDescription: "Budge uses your microphone to let you dictate chat messages."
+        NSSpeechRecognitionUsageDescription: "Budge uses speech recognition to transcribe your voice into chat messages."
         CFBundleURLTypes:
           - CFBundleTypeRole: Editor
             CFBundleURLSchemes:

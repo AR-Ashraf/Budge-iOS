@@ -35,6 +35,28 @@ final class AuthService {
         // AppDelegate finished configuring Firebase, which triggers noisy warnings.
     }
 
+    private var functions: Functions { Functions.functions(region: "us-central1") }
+
+    private func kitSubscribeIfPossible(uid: String, email: String, name: String) async {
+        guard !email.isEmpty else { return }
+        // Best-effort: do not block auth UX.
+        let parts = name.split(separator: " ").map(String.init)
+        let firstName = parts.first
+        let lastName = parts.dropFirst().joined(separator: " ")
+        let callable = functions.httpsCallable("kit_subscribe")
+        do {
+            var payload: [String: Any] = [
+                "email": email,
+                "firstName": firstName as Any,
+                "source": "Budge iOS"
+            ]
+            if !lastName.isEmpty { payload["lastName"] = lastName }
+            _ = try await callable.call(payload)
+        } catch {
+            // Ignore
+        }
+    }
+
     // MARK: - Public Methods
 
     /// Start observing Firebase auth state. Safe to call multiple times.
@@ -105,6 +127,9 @@ final class AuthService {
             try await Firestore.firestore().collection("users").document(authResult.user.uid).setData(userDoc, merge: true)
 
             await hydrateUser(authResult.user)
+
+            // Web parity: subscribe user to Kit on sign-in (best-effort, server-side).
+            Task { await self.kitSubscribeIfPossible(uid: authResult.user.uid, email: email, name: name) }
         } catch let err as NSError {
             let authError = AuthError.fromFirebase(err)
             error = authError
@@ -215,6 +240,9 @@ final class AuthService {
                 "createdAt": FieldValue.serverTimestamp()
             ]
             try await Firestore.firestore().collection("users").document(result.user.uid).setData(userDoc, merge: true)
+
+            // Web parity: subscribe user to Kit on sign-up (best-effort, server-side).
+            Task { await self.kitSubscribeIfPossible(uid: result.user.uid, email: normalizedEmail, name: trimmedName) }
 
             // Mirror web behavior: user signs up, verifies email, then logs in.
             try? Auth.auth().signOut()

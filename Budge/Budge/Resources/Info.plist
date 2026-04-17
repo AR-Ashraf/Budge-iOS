@@ -33,6 +33,10 @@
 	<string>1</string>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<false/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Budge uses your microphone to let you dictate chat messages.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Budge uses speech recognition to transcribe your voice into chat messages.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

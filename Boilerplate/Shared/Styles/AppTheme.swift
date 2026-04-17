@@ -24,12 +24,20 @@ enum AppTheme {
         static let tertiaryBackground = Color(uiColor: .tertiarySystemBackground)
         static let groupedBackground = Color(uiColor: .systemGroupedBackground)
 
+        // Surfaces (used by chat UI parity)
+        static let surface = secondaryBackground
+        static let surfaceElevated = tertiaryBackground
+
         // Text colors
         static let text = Color(uiColor: .label)
         static let secondaryText = Color(uiColor: .secondaryLabel)
         static let tertiaryText = Color(uiColor: .tertiaryLabel)
         static let quaternaryText = Color(uiColor: .quaternaryLabel)
         static let placeholderText = Color(uiColor: .placeholderText)
+
+        // Chat token aliases (for readability)
+        static let textPrimary = text
+        static let textSecondary = secondaryText
 
         // Semantic colors
         static let success = Color.green

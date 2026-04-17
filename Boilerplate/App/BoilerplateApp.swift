@@ -13,6 +13,7 @@ struct BoilerplateApp: App {
     private let authService: AuthService
     private let onboardingService: OnboardingService
     private let analyticsService = AnalyticsService()
+    private let chatService = ChatService()
 
     // MARK: - Initialization
 
@@ -33,6 +34,7 @@ struct BoilerplateApp: App {
                 .environment(authService)
                 .environment(onboardingService)
                 .environment(analyticsService)
+                .environment(chatService)
         }
         .modelContainer(SwiftDataContainer.shared)
     }
