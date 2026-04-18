@@ -372,43 +372,191 @@ struct AssistantMessageToolbar: View {
     var body: some View {
         let palette = BudgeChatPalette(colorScheme: colorScheme)
         HStack(spacing: 4) {
-            toolbarIcon("doc.on.doc", label: "Copy", tint: palette.secondaryIcon) {
-                UIPasteboard.general.string = rawText
-            }
-            toolbarIcon("hand.thumbsup", label: "Like", tint: palette.secondaryIcon) {
-                openReviewURL()
-            }
-            toolbarIcon("hand.thumbsdown", label: "Dislike", tint: palette.secondaryIcon) {
-                openReviewURL()
-            }
-            let speaking = readAloud.speakingMessageId == messageId
-            toolbarIcon(
-                speaking ? "stop.fill" : "speaker.wave.2",
-                label: speaking ? "Stop speaking" : "Read aloud",
-                tint: speaking ? Color.red.opacity(0.9) : palette.secondaryIcon
-            ) {
-                readAloud.toggle(messageId: messageId, plainText: rawText)
-            }
+            AssistantCopyToolbarButton(
+                rawText: rawText,
+                secondaryTint: palette.secondaryIcon,
+                brandGreen: palette.brandGreenPrimary
+            )
+            AssistantThumbToolbarButton(kind: .like, secondaryTint: palette.secondaryIcon)
+            AssistantThumbToolbarButton(kind: .dislike, secondaryTint: palette.secondaryIcon)
+            AssistantSpeakerToolbarButton(
+                messageId: messageId,
+                rawText: rawText,
+                readAloud: readAloud,
+                secondaryTint: palette.secondaryIcon
+            )
         }
         .padding(.top, 6)
         .padding(.leading, 4)
     }
+}
 
-    private func toolbarIcon(_ system: String, label: String, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: system)
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(tint)
-                .frame(width: 36, height: 36)
-                .contentShape(Rectangle())
+// MARK: - Copy (icon fill + check)
+
+private struct AssistantCopyToolbarButton: View {
+    let rawText: String
+    let secondaryTint: Color
+    let brandGreen: Color
+
+    private enum Phase { case idle, filling, checked }
+    @State private var phase: Phase = .idle
+
+    var body: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            UIPasteboard.general.string = rawText
+            Task { @MainActor in
+                withAnimation(.easeOut(duration: 0.14)) { phase = .filling }
+                try? await Task.sleep(for: .milliseconds(150))
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.74)) { phase = .checked }
+                try? await Task.sleep(for: .milliseconds(820))
+                withAnimation(.easeOut(duration: 0.26)) { phase = .idle }
+            }
+        } label: {
+            ZStack {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(secondaryTint)
+                    .opacity(phase == .idle ? 1 : 0)
+
+                Image(systemName: "doc.on.doc.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(brandGreen)
+                    .opacity(phase == .filling ? 1 : 0)
+                    .scaleEffect(phase == .filling ? 1.05 : 1)
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(Color.white, brandGreen)
+                    .opacity(phase == .checked ? 1 : 0)
+                    .symbolEffect(.bounce, value: phase == .checked)
+            }
+            .frame(width: 36, height: 36)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(label)
+        .accessibilityLabel("Copy")
+    }
+}
+
+// MARK: - Like / Dislike (fill then Facebook)
+
+private struct AssistantThumbToolbarButton: View {
+    enum Kind { case like, dislike }
+
+    let kind: Kind
+    let secondaryTint: Color
+
+    @State private var filled: Bool = false
+    @State private var pressed: Bool = false
+
+    private var fillColor: Color {
+        switch kind {
+        case .like: return Color(red: 0.09, green: 0.55, blue: 0.95)
+        case .dislike: return Color(red: 0.95, green: 0.35, blue: 0.28)
+        }
     }
 
-    private func openReviewURL() {
-        guard let url = URL(string: "https://apps.apple.com/search?term=MyBudge") else { return }
+    private var systemImage: String {
+        switch kind {
+        case .like: return "hand.thumbsup"
+        case .dislike: return "hand.thumbsdown"
+        }
+    }
+
+    private var systemImageFilled: String {
+        switch kind {
+        case .like: return "hand.thumbsup.fill"
+        case .dislike: return "hand.thumbsdown.fill"
+        }
+    }
+
+    private var accessibilityLabel: String {
+        switch kind {
+        case .like: return "Like"
+        case .dislike: return "Dislike"
+        }
+    }
+
+    var body: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                filled = true
+                pressed = true
+            }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(380))
+                openFacebook()
+                try? await Task.sleep(for: .milliseconds(220))
+                withAnimation(.easeOut(duration: 0.28)) {
+                    filled = false
+                    pressed = false
+                }
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(fillColor.opacity(0.22 + 0.58 * (filled ? 1 : 0)))
+                    .scaleEffect(filled ? 1 : 0.2)
+                    .opacity(filled ? 1 : 0)
+
+                Image(systemName: filled ? systemImageFilled : systemImage)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(filled ? fillColor : secondaryTint)
+                    .scaleEffect(pressed ? 0.92 : 1)
+            }
+            .frame(width: 36, height: 36)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private func openFacebook() {
+        guard let url = URL(string: "https://facebook.com/mybudgeai") else { return }
         UIApplication.shared.open(url)
+    }
+}
+
+// MARK: - Read aloud
+
+private struct AssistantSpeakerToolbarButton: View {
+    let messageId: String
+    let rawText: String
+    @Bindable var readAloud: ReadAloudController
+    let secondaryTint: Color
+
+    @State private var pressed: Bool = false
+
+    var body: some View {
+        let speaking = readAloud.speakingMessageId == messageId
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            readAloud.toggle(messageId: messageId, plainText: rawText)
+            withAnimation(.spring(response: 0.22, dampingFraction: 0.62)) { pressed = true }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(110))
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) { pressed = false }
+            }
+        } label: {
+            ZStack {
+                if speaking {
+                    Circle()
+                        .fill(Color.red.opacity(0.18))
+                        .frame(width: 32, height: 32)
+                }
+                Image(systemName: speaking ? "stop.fill" : "speaker.wave.2")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(speaking ? Color.red.opacity(0.92) : secondaryTint)
+                    .scaleEffect(pressed ? 0.88 : 1)
+            }
+            .frame(width: 36, height: 36)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(speaking ? "Stop speaking" : "Read aloud")
     }
 }
 
