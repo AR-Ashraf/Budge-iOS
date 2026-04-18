@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// App theme configuration for colors and typography.
 ///
@@ -12,14 +13,37 @@ enum AppTheme {
         static let primary = Color.accentColor
         static let secondary = Color.secondary
 
-        // Budge (web parity) tokens for unauth (light only)
-        static let budgeAuthBackground = Color(hex: "#F5F5F7") // primary.light
-        static let budgeAuthCard = Color(hex: "#FFFFFF") // secondary.light
-        static let budgeAuthTextPrimary = Color(hex: "#163300") // text.primary.light
-        static let budgeAuthTextSecondary = Color(hex: "#163300") // text.100.light
-        static let budgeAuthBorder = Color(hex: "#D2D2D780") // border.primary.light
+        // Budge (web parity) — dynamic with light/dark (aligned with ``BudgeChatPalette``).
+        static var budgeAuthBackground: Color {
+            dynamicBudge { $0.authBackground }
+        }
+
+        static var budgeAuthCard: Color {
+            dynamicBudge { $0.authCard }
+        }
+
+        static var budgeAuthTextPrimary: Color {
+            dynamicBudge { $0.authTextPrimary }
+        }
+
+        static var budgeAuthTextSecondary: Color {
+            dynamicBudge { $0.authTextSecondary }
+        }
+
+        static var budgeAuthBorder: Color {
+            dynamicBudge { $0.authBorder }
+        }
+
         static let budgeGreenPrimary = Color(hex: "#71C635") // brandGreenPrimary
         static let budgeGreenDarkText = Color(hex: "#163300") // brandGreenDarkText
+
+        private static func dynamicBudge(_ colorFromPalette: @escaping (BudgeChatPalette) -> Color) -> Color {
+            Color(uiColor: UIColor { trait in
+                let scheme: ColorScheme = trait.userInterfaceStyle == .dark ? .dark : .light
+                let palette = BudgeChatPalette(colorScheme: scheme)
+                return UIColor(colorFromPalette(palette))
+            })
+        }
 
         /// Web `secondary` — `#161617` (dark) / `#FFFFFF` (light). Chat bubbles, composer, FAB (dark), etc.
         /// Prefer ``BudgeChatPalette/secondarySurface`` in SwiftUI; this is for call sites that have `ColorScheme`.

@@ -3,27 +3,13 @@ import SwiftUI
 struct JourneyCompletionView: View {
     let onEnterChat: () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var pageBackground: Color {
-        colorScheme == .dark ? Color(hex: "#1D1D1F") : AppTheme.Colors.budgeAuthBackground
-    }
-
-    private var pageTextPrimary: Color {
-        colorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextPrimary
-    }
-
-    private var pageTextSecondary: Color {
-        colorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextSecondary
-    }
-
     @State private var didFire = false
     @State private var imageLoaded = false
     @State private var didAppear = false
 
     var body: some View {
         ZStack {
-            pageBackground.ignoresSafeArea()
+            AppTheme.Colors.budgeAuthBackground.ignoresSafeArea()
 
             VStack(spacing: 16) {
                 Spacer(minLength: 0)
@@ -46,12 +32,12 @@ struct JourneyCompletionView: View {
 
                 Text("Congratulation!!")
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(pageTextPrimary)
+                    .foregroundStyle(AppTheme.Colors.budgeAuthTextPrimary)
                     .multilineTextAlignment(.center)
 
                 Text("You are entering the Budge System")
                     .font(AppTheme.Typography.body)
-                    .foregroundStyle(pageTextSecondary)
+                    .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
                     .multilineTextAlignment(.center)
 
                 Spacer(minLength: 0)

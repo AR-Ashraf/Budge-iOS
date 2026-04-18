@@ -5,6 +5,7 @@ struct UserTypeView: View {
     let uid: String
     let onSelected: (OnboardingUserType) -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var isSaving = false
@@ -116,11 +117,11 @@ private extension UserTypeView {
                 .background(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(AppTheme.Colors.budgeAuthCard)
-                        .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+                        .shadow(color: colorScheme == .dark ? .clear : Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color(hex: "#D2D2D7"), lineWidth: 1)
+                        .stroke(AppTheme.Colors.budgeAuthBorder, lineWidth: 1)
                 )
 
             speechTail
@@ -135,7 +136,7 @@ private extension UserTypeView {
                 .frame(width: 16, height: 16)
                 .rotationEffect(.degrees(45))
             Rectangle()
-                .strokeBorder(Color(hex: "#D2D2D7"), lineWidth: 1)
+                .strokeBorder(AppTheme.Colors.budgeAuthBorder, lineWidth: 1)
                 .frame(width: 16, height: 16)
                 .rotationEffect(.degrees(45))
         }
@@ -147,7 +148,7 @@ private extension UserTypeView {
         let cardWidth: CGFloat = horizontalSizeClass == .regular ? 368 : 288 // 23rem / 18rem
         let verticalPadding: CGFloat = horizontalSizeClass == .regular ? 32 : 16 // py 8 / 4
 
-        let borderColor = isSelected ? AppTheme.Colors.budgeGreenPrimary : Color(hex: "#D2D2D7")
+        let borderColor = isSelected ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.budgeAuthBorder
         let borderWidth: CGFloat = isSelected ? 2 : 1
         let scale: CGFloat = isPressed ? 0.97 : 1.0
 

@@ -4,6 +4,7 @@ import SwiftUI
 struct BudgeSetupIntroView: View {
     let onContinue: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var displayedText = ""
@@ -111,11 +112,11 @@ struct BudgeSetupIntroView: View {
             .background(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(AppTheme.Colors.budgeAuthCard)
-                    .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+                    .shadow(color: colorScheme == .dark ? .clear : Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color(hex: "#D2D2D7"), lineWidth: 1)
+                    .stroke(AppTheme.Colors.budgeAuthBorder, lineWidth: 1)
             )
 
             // Speech tail (web parity: rotated square + border.card)
@@ -133,7 +134,7 @@ struct BudgeSetupIntroView: View {
                 .frame(width: 16, height: 16)
                 .rotationEffect(.degrees(45))
             Rectangle()
-                .strokeBorder(Color(hex: "#D2D2D7"), lineWidth: 1)
+                .strokeBorder(AppTheme.Colors.budgeAuthBorder, lineWidth: 1)
                 .frame(width: 16, height: 16)
                 .rotationEffect(.degrees(45))
         }

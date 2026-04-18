@@ -71,4 +71,21 @@ struct BudgeChatPalette {
     var secondaryIcon: Color {
         colorScheme == .dark ? Color(hex: "#F5FFF6").opacity(0.65) : Color(hex: "#163300").opacity(0.55)
     }
+
+    // MARK: - Auth / onboarding (same tokens as chat; use with `ColorScheme` from environment)
+
+    /// Full-screen background for sign-in, sign-up, and Budge setup flows.
+    var authBackground: Color { screenBackground }
+
+    /// Cards and elevated fields on auth/onboarding.
+    var authCard: Color { cardSurface }
+
+    /// Primary headings and labels.
+    var authTextPrimary: Color { bodyText }
+
+    /// Secondary / supporting copy.
+    var authTextSecondary: Color { starterCardSubtitle }
+
+    /// Default borders for inputs and selection controls.
+    var authBorder: Color { borderPrimary }
 }

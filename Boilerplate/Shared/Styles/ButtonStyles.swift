@@ -1,23 +1,33 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Primary Button Style
 
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorScheme) private var colorScheme
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(AppTheme.Typography.buttonLabel)
-            .foregroundStyle(AppTheme.Colors.budgeGreenDarkText)
+            .foregroundStyle(primaryLabelColor)
             .frame(maxWidth: .infinity)
             .frame(height: UIConstants.ButtonSize.medium)
             .background(
                 RoundedRectangle(cornerRadius: UIConstants.CornerRadius.pill)
-                    .fill(isEnabled ? AppTheme.Colors.budgeGreenPrimary : Color.gray)
+                    .fill(isEnabled ? AppTheme.Colors.budgeGreenPrimary : Color(uiColor: .tertiarySystemFill))
             )
             .opacity(configuration.isPressed ? 0.8 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
             .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+    }
+
+    /// Disabled primary pills: keep dark-green label in light mode; white in dark mode (on gray fill).
+    private var primaryLabelColor: Color {
+        if isEnabled {
+            return AppTheme.Colors.budgeGreenDarkText
+        }
+        return colorScheme == .dark ? .white : AppTheme.Colors.budgeGreenDarkText
     }
 }
 
@@ -29,12 +39,12 @@ struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(AppTheme.Typography.buttonLabel)
-            .foregroundStyle(isEnabled ? AppTheme.Colors.budgeAuthTextSecondary : Color.gray)
+            .foregroundStyle(isEnabled ? AppTheme.Colors.budgeAuthTextSecondary : Color(uiColor: .tertiaryLabel))
             .frame(maxWidth: .infinity)
             .frame(height: UIConstants.ButtonSize.medium)
             .background(
                 RoundedRectangle(cornerRadius: UIConstants.CornerRadius.pill)
-                    .stroke(isEnabled ? AppTheme.Colors.budgeAuthBorder : Color.gray, lineWidth: UIConstants.Border.standard)
+                    .stroke(isEnabled ? AppTheme.Colors.budgeAuthBorder : Color(uiColor: .tertiarySystemFill), lineWidth: UIConstants.Border.standard)
             )
             .opacity(configuration.isPressed ? 0.8 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)

@@ -97,10 +97,7 @@ struct SignUpView: View {
 
     private var headerSection: some View {
         VStack(spacing: UIConstants.Spacing.sm) {
-            Image("Brand")
-                .resizable()
-                .scaledToFit()
-                .frame(height: 120)
+            AuthBrandLogo(height: 120)
                 .padding(.top, UIConstants.Spacing.xl)
                 .padding(.bottom, UIConstants.Spacing.xl)
 
@@ -427,7 +424,7 @@ struct CheckboxToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(alignment: .top, spacing: UIConstants.Spacing.sm) {
             Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
-                .foregroundStyle(configuration.isOn ? .accentColor : AppTheme.Colors.secondaryText)
+                .foregroundStyle(configuration.isOn ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.secondaryText)
                 .onTapGesture {
                     configuration.isOn.toggle()
                 }

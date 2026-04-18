@@ -4,27 +4,13 @@ import SwiftUI
 struct FinancialSetupCompletionView: View {
     let onContinue: () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
-
     @State private var didFire = false
     @State private var imageLoaded = false
     @State private var didAppear = false
 
-    private var pageBackground: Color {
-        colorScheme == .dark ? Color(hex: "#1D1D1F") : AppTheme.Colors.budgeAuthBackground
-    }
-
-    private var pageTextPrimary: Color {
-        colorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextPrimary
-    }
-
-    private var pageTextSecondary: Color {
-        colorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextSecondary
-    }
-
     var body: some View {
         ZStack {
-            pageBackground.ignoresSafeArea()
+            AppTheme.Colors.budgeAuthBackground.ignoresSafeArea()
 
             VStack(spacing: 16) {
                 Spacer(minLength: 0)
@@ -47,13 +33,13 @@ struct FinancialSetupCompletionView: View {
 
                 Text("You Are So Fast!! 😎")
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(pageTextPrimary)
+                    .foregroundStyle(AppTheme.Colors.budgeAuthTextPrimary)
                     .multilineTextAlignment(.center)
                     .padding(.top, 8)
 
                 Text("I knew that you are amazing")
                     .font(AppTheme.Typography.body)
-                    .foregroundStyle(pageTextSecondary)
+                    .foregroundStyle(AppTheme.Colors.budgeAuthTextSecondary)
                     .multilineTextAlignment(.center)
 
                 Spacer(minLength: 0)

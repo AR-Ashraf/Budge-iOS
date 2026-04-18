@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Primary action button with optional loading state and icon
 struct PrimaryButton: View {
@@ -14,6 +15,7 @@ struct PrimaryButton: View {
     // MARK: - Environment
 
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorScheme) private var colorScheme
 
     // MARK: - Body
 
@@ -37,7 +39,7 @@ struct PrimaryButton: View {
                         .font(AppTheme.Typography.buttonLabel)
                 }
             }
-            .foregroundStyle(AppTheme.Colors.budgeGreenDarkText)
+            .foregroundStyle(primaryForegroundColor)
             .frame(maxWidth: isFullWidth ? .infinity : nil)
             .frame(height: UIConstants.ButtonSize.medium)
             .padding(.horizontal, isFullWidth ? 0 : UIConstants.Spacing.lg)
@@ -53,9 +55,17 @@ struct PrimaryButton: View {
 
     private var backgroundColor: Color {
         if !isEnabled {
-            return .gray
+            return Color(uiColor: .tertiarySystemFill)
         }
         return AppTheme.Colors.budgeGreenPrimary
+    }
+
+    /// Enabled: brand dark green on green fill. Disabled (e.g. empty form): white in dark mode on gray fill.
+    private var primaryForegroundColor: Color {
+        if isEnabled {
+            return AppTheme.Colors.budgeGreenDarkText
+        }
+        return colorScheme == .dark ? .white : AppTheme.Colors.budgeGreenDarkText
     }
 }
 

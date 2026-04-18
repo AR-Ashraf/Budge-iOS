@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Step-by-step category amounts for income or expense (web `financialPart` parity).
 struct FinancialCategoryFlowView: View {
@@ -20,6 +21,8 @@ struct FinancialCategoryFlowView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(ThemeController.self) private var themeController
 
+    private var palette: BudgeChatPalette { BudgeChatPalette(colorScheme: colorScheme) }
+
     @State private var step = 0
     @State private var amounts: [String: Double] = [:]
     @State private var amountText = ""
@@ -34,30 +37,10 @@ struct FinancialCategoryFlowView: View {
     private var monthKey: String { OnboardingService.currentBudgetMonthKey }
     private var normalizedCurrency: String { currency.uppercased() }
 
-    private var pageBackground: Color {
-        colorScheme == .dark ? Color(hex: "#1D1D1F") : AppTheme.Colors.budgeAuthBackground
-    }
-
-    private var cardBackground: Color {
-        colorScheme == .dark ? Color(hex: "#161617") : AppTheme.Colors.budgeAuthCard
-    }
-
-    private var pageTextPrimary: Color {
-        colorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextPrimary
-    }
-
-    private var pageTextSecondary: Color {
-        colorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextSecondary
-    }
-
-    private var pageBorder: Color {
-        colorScheme == .dark ? Color(hex: "#333336") : AppTheme.Colors.budgeAuthBorder
-    }
-
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                pageBackground.ignoresSafeArea()
+                palette.authBackground.ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     topHeader
@@ -136,12 +119,12 @@ struct FinancialCategoryFlowView: View {
                 Button(action: toggleThemePreference) {
                     Image(systemName: colorScheme == .dark ? "sun.max.fill" : "moon.fill")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(pageTextSecondary)
+                        .foregroundStyle(palette.authTextSecondary)
                         .frame(width: 28, height: 28)
                         .background(
                             Circle()
-                                .fill(cardBackground)
-                                .overlay(Circle().stroke(pageBorder, lineWidth: 1))
+                                .fill(palette.authCard)
+                                .overlay(Circle().stroke(palette.authBorder, lineWidth: 1))
                         )
                 }
                 .buttonStyle(.plain)
@@ -151,14 +134,14 @@ struct FinancialCategoryFlowView: View {
                     currencyLeading
                     Text(normalizedCurrency)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color(hex: "#04A10F"))
+                        .foregroundStyle(palette.currencyPillAccent)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(Color(hex: "#009F2B33"))
-                        .overlay(Capsule(style: .continuous).stroke(Color(hex: "#04A10F"), lineWidth: 1))
+                        .fill(palette.currencyPillBackground)
+                        .overlay(Capsule(style: .continuous).stroke(palette.currencyPillAccent, lineWidth: 1))
                 )
             }
         }
@@ -170,19 +153,19 @@ struct FinancialCategoryFlowView: View {
         case "EUR":
             Image(systemName: "eurosign")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color(hex: "#04A10F"))
+                .foregroundStyle(palette.currencyPillAccent)
         case "GBP":
             Image(systemName: "sterlingsign")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color(hex: "#04A10F"))
+                .foregroundStyle(palette.currencyPillAccent)
         case "BDT":
             Text("৳")
                 .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(Color(hex: "#04A10F"))
+                .foregroundStyle(palette.currencyPillAccent)
         default:
             Image(systemName: "dollarsign")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color(hex: "#04A10F"))
+                .foregroundStyle(palette.currencyPillAccent)
         }
     }
 
@@ -192,7 +175,7 @@ struct FinancialCategoryFlowView: View {
         return VStack(spacing: 16) {
             Text("\(currentMonthName) \(budgetTypeName) Budgets")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(pageTextPrimary)
+                .foregroundStyle(palette.authTextPrimary)
                 .multilineTextAlignment(.center)
 
             ProgressView(value: progressValue, total: 100)
@@ -201,7 +184,7 @@ struct FinancialCategoryFlowView: View {
                 .frame(height: 8)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.black.opacity(0.08))
+                        .fill(palette.authBorder.opacity(colorScheme == .dark ? 0.35 : 0.2))
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .animation(.easeInOut(duration: 0.35), value: progressValue)
@@ -209,7 +192,7 @@ struct FinancialCategoryFlowView: View {
             VStack(spacing: 16) {
                 Text(current.name)
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(pageTextPrimary)
+                    .foregroundStyle(palette.authTextPrimary)
                     .multilineTextAlignment(.center)
 
                 TextField("Input Here", text: $amountText)
@@ -221,7 +204,7 @@ struct FinancialCategoryFlowView: View {
                     .frame(height: 56)
                     .background(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(pageBackground)
+                            .fill(palette.authBackground)
                     )
             }
             .id(step)
@@ -241,7 +224,7 @@ struct FinancialCategoryFlowView: View {
                     Task { await skipAll() }
                 }
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(pageTextSecondary)
+                .foregroundStyle(palette.authTextSecondary)
                 .disabled(isBusy)
 
                 Spacer()
@@ -251,7 +234,7 @@ struct FinancialCategoryFlowView: View {
                         Task { await skipCurrentOrFinishIfLast() }
                     }
                     .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(pageTextSecondary)
+                    .foregroundStyle(palette.authTextSecondary)
                     .disabled(isBusy)
 
                     SmallPillButton(
@@ -268,11 +251,11 @@ struct FinancialCategoryFlowView: View {
         .frame(width: cardWidth)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(cardBackground)
+                .fill(palette.authCard)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(pageBorder, lineWidth: 1)
+                .stroke(palette.authBorder, lineWidth: 1)
         )
         .offset(y: isNavigate ? -100 : 0)
         .opacity(isNavigate ? 0 : 1)
@@ -303,13 +286,13 @@ struct FinancialCategoryFlowView: View {
 
     private func speechBubble(text: String, availableWidth: CGFloat) -> some View {
         let maxBubbleWidth = min(availableWidth - (UIConstants.Padding.section * 2), 320)
-        let bubbleFill = colorScheme == .dark ? Color(hex: "#161617") : Color(hex: "#FAFAFC")
-        let bubbleStroke = colorScheme == .dark ? Color(hex: "#424245") : Color(hex: "#D2D2D7")
+        let bubbleFill = colorScheme == .dark ? palette.secondarySurface : Color(hex: "#FAFAFC")
+        let bubbleStroke = palette.authBorder
 
         return ZStack(alignment: .bottomTrailing) {
             Text(text)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(pageTextSecondary)
+                .foregroundStyle(palette.authTextSecondary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .padding(.horizontal, 18)
@@ -318,7 +301,7 @@ struct FinancialCategoryFlowView: View {
                 .background(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(bubbleFill)
-                        .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+                        .shadow(color: colorScheme == .dark ? .clear : Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -523,7 +506,7 @@ private struct SmallPillButton: View {
     var body: some View {
         let textColor: Color = {
             if isDisabled || isLoading {
-                return colorScheme == .dark ? Color(white: 0.75) : Color.gray
+                return Color(uiColor: .tertiaryLabel)
             }
             return AppTheme.Colors.budgeGreenDarkText
         }()
@@ -548,7 +531,7 @@ private struct SmallPillButton: View {
             .frame(height: 30)
             .background(
                 Capsule(style: .continuous)
-                    .fill(isDisabled ? Color.gray.opacity(0.25) : AppTheme.Colors.budgeGreenPrimary)
+                    .fill(isDisabled ? Color(uiColor: .tertiarySystemFill) : AppTheme.Colors.budgeGreenPrimary)
             )
         }
         .buttonStyle(.plain)
