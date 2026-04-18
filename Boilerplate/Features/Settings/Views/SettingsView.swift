@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Environment(AuthService.self) private var authService
     @Environment(AnalyticsService.self) private var analyticsService
     @Environment(Router.self) private var router
+    @Environment(ThemeController.self) private var themeController
 
     // MARK: - State
 
@@ -28,7 +29,7 @@ struct SettingsView: View {
                 preferencesSection(viewModel)
 
                 // Appearance section
-                appearanceSection(viewModel)
+                appearanceSection
 
                 // Support section
                 supportSection
@@ -151,12 +152,15 @@ struct SettingsView: View {
         }
     }
 
-    private func appearanceSection(_ viewModel: SettingsViewModel) -> some View {
+    private var appearanceSection: some View {
         Section("Appearance") {
-            Picker("Theme", selection: Binding(
-                get: { viewModel.selectedTheme },
-                set: { viewModel.selectedTheme = $0 }
-            )) {
+            Picker(
+                "Theme",
+                selection: Binding(
+                    get: { themeController.preference },
+                    set: { themeController.preference = $0 }
+                )
+            ) {
                 ForEach(AppThemeOption.allCases) { theme in
                     Label(theme.displayName, systemImage: theme.icon)
                         .tag(theme)
@@ -246,4 +250,5 @@ struct SettingsView: View {
     .environment(AuthService(apiClient: APIClient()))
     .environment(AnalyticsService())
     .environment(Router.shared)
+    .environment(ThemeController())
 }

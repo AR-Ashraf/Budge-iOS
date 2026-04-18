@@ -17,8 +17,8 @@ struct FinancialCategoryFlowView: View {
     var onExpenseCompleted: () async -> Void
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @Environment(\.colorScheme) private var systemColorScheme
-    @AppStorage("themePreference") private var themePreferenceRaw = "system"
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(ThemeController.self) private var themeController
 
     @State private var step = 0
     @State private var amounts: [String: Double] = [:]
@@ -34,36 +34,24 @@ struct FinancialCategoryFlowView: View {
     private var monthKey: String { OnboardingService.currentBudgetMonthKey }
     private var normalizedCurrency: String { currency.uppercased() }
 
-    private var preferredColorSchemeOverride: ColorScheme? {
-        switch themePreferenceRaw {
-        case "light": return .light
-        case "dark": return .dark
-        default: return nil
-        }
-    }
-
-    private var effectiveColorScheme: ColorScheme {
-        preferredColorSchemeOverride ?? systemColorScheme
-    }
-
     private var pageBackground: Color {
-        effectiveColorScheme == .dark ? Color(hex: "#1D1D1F") : AppTheme.Colors.budgeAuthBackground
+        colorScheme == .dark ? Color(hex: "#1D1D1F") : AppTheme.Colors.budgeAuthBackground
     }
 
     private var cardBackground: Color {
-        effectiveColorScheme == .dark ? Color(hex: "#161617") : AppTheme.Colors.budgeAuthCard
+        colorScheme == .dark ? Color(hex: "#161617") : AppTheme.Colors.budgeAuthCard
     }
 
     private var pageTextPrimary: Color {
-        effectiveColorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextPrimary
+        colorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextPrimary
     }
 
     private var pageTextSecondary: Color {
-        effectiveColorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextSecondary
+        colorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextSecondary
     }
 
     private var pageBorder: Color {
-        effectiveColorScheme == .dark ? Color(hex: "#333336") : AppTheme.Colors.budgeAuthBorder
+        colorScheme == .dark ? Color(hex: "#333336") : AppTheme.Colors.budgeAuthBorder
     }
 
     var body: some View {
@@ -95,7 +83,6 @@ struct FinancialCategoryFlowView: View {
                 isAmountFocused = false
             }
         }
-        .preferredColorScheme(preferredColorSchemeOverride)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear {
             syncTextFromAmounts()
@@ -147,7 +134,7 @@ struct FinancialCategoryFlowView: View {
 
             HStack(spacing: 8) {
                 Button(action: toggleThemePreference) {
-                    Image(systemName: effectiveColorScheme == .dark ? "sun.max.fill" : "moon.fill")
+                    Image(systemName: colorScheme == .dark ? "sun.max.fill" : "moon.fill")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(pageTextSecondary)
                         .frame(width: 28, height: 28)
@@ -316,8 +303,8 @@ struct FinancialCategoryFlowView: View {
 
     private func speechBubble(text: String, availableWidth: CGFloat) -> some View {
         let maxBubbleWidth = min(availableWidth - (UIConstants.Padding.section * 2), 320)
-        let bubbleFill = effectiveColorScheme == .dark ? Color(hex: "#161617") : Color(hex: "#FAFAFC")
-        let bubbleStroke = effectiveColorScheme == .dark ? Color(hex: "#424245") : Color(hex: "#D2D2D7")
+        let bubbleFill = colorScheme == .dark ? Color(hex: "#161617") : Color(hex: "#FAFAFC")
+        let bubbleStroke = colorScheme == .dark ? Color(hex: "#424245") : Color(hex: "#D2D2D7")
 
         return ZStack(alignment: .bottomTrailing) {
             Text(text)
@@ -521,15 +508,7 @@ struct FinancialCategoryFlowView: View {
     }
 
     private func toggleThemePreference() {
-        switch themePreferenceRaw {
-        case "light":
-            themePreferenceRaw = "dark"
-        case "dark":
-            themePreferenceRaw = "light"
-        default:
-            // First override from system: choose opposite for clear visible feedback.
-            themePreferenceRaw = (systemColorScheme == .dark) ? "light" : "dark"
-        }
+        themeController.toggleLightDark(currentSystemScheme: colorScheme)
     }
 }
 

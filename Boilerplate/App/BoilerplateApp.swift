@@ -14,6 +14,7 @@ struct BoilerplateApp: App {
     private let onboardingService: OnboardingService
     private let analyticsService = AnalyticsService()
     private let chatService = ChatService()
+    private let themeController = ThemeController()
 
     // MARK: - Initialization
 
@@ -35,6 +36,7 @@ struct BoilerplateApp: App {
                 .environment(onboardingService)
                 .environment(analyticsService)
                 .environment(chatService)
+                .environment(themeController)
         }
         .modelContainer(SwiftDataContainer.shared)
     }
@@ -58,7 +60,7 @@ struct RootView: View {
     @Environment(Router.self) private var router
     @Environment(AuthService.self) private var authService
     @Environment(OnboardingService.self) private var onboarding
-    @Environment(\.colorScheme) private var systemColorScheme
+    @Environment(ThemeController.self) private var themeController
 
     @State private var onboardingProfile: [String: Any]?
     @State private var isFetchingOnboardingProfile = false
@@ -87,6 +89,7 @@ struct RootView: View {
                 destinationView(for: route)
             }
         }
+        .preferredColorScheme(themeController.preferredColorScheme)
         .sheet(item: $router.presentedSheet) { sheet in
             sheetView(for: sheet)
         }
@@ -95,22 +98,10 @@ struct RootView: View {
             FirebaseBootstrap.configureIfNeeded()
             authService.start()
 
-            // Initialize persisted theme preference from the device theme on first run.
-            let oldThemeKey = "financialSetupThemePreference"
-            let themeKey = "themePreference"
-
+            // First launch: if nothing persisted yet, default to system (matches ``UserDefaultsWrapper``).
             let defaults = UserDefaults.standard
-
-            // Migration: if the old key exists but the new key doesn't, copy it over.
-            if defaults.string(forKey: themeKey) == nil,
-               let oldValue = defaults.string(forKey: oldThemeKey) {
-                defaults.set(oldValue, forKey: themeKey)
-                defaults.removeObject(forKey: oldThemeKey)
-            }
-
-            // First run: seed the theme from device setting.
-            if defaults.string(forKey: themeKey) == nil {
-                defaults.set(systemColorScheme == .dark ? "dark" : "light", forKey: themeKey)
+            if defaults.string(forKey: "selectedTheme") == nil {
+                defaults.set("system", forKey: "selectedTheme")
             }
         }
         .onChange(of: authService.currentUser?.id) { _, _ in

@@ -39,7 +39,6 @@ struct ManageBalanceView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .preferredColorScheme(.light)
     }
 
     private var headerSection: some View {

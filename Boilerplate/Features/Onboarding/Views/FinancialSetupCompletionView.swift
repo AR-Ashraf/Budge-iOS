@@ -4,31 +4,22 @@ import SwiftUI
 struct FinancialSetupCompletionView: View {
     let onContinue: () -> Void
 
-    @AppStorage("themePreference") private var themePreferenceRaw = "system"
-    @Environment(\.colorScheme) private var systemColorScheme
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var didFire = false
     @State private var imageLoaded = false
     @State private var didAppear = false
 
-    private var effectiveColorScheme: ColorScheme {
-        switch themePreferenceRaw {
-        case "light": return .light
-        case "dark": return .dark
-        default: return systemColorScheme
-        }
-    }
-
     private var pageBackground: Color {
-        effectiveColorScheme == .dark ? Color(hex: "#1D1D1F") : AppTheme.Colors.budgeAuthBackground
+        colorScheme == .dark ? Color(hex: "#1D1D1F") : AppTheme.Colors.budgeAuthBackground
     }
 
     private var pageTextPrimary: Color {
-        effectiveColorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextPrimary
+        colorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextPrimary
     }
 
     private var pageTextSecondary: Color {
-        effectiveColorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextSecondary
+        colorScheme == .dark ? Color(hex: "#F5FFF6") : AppTheme.Colors.budgeAuthTextSecondary
     }
 
     var body: some View {
@@ -72,7 +63,6 @@ struct FinancialSetupCompletionView: View {
             .offset(y: didAppear ? 0 : 80)
             .animation(.easeInOut(duration: 0.6), value: didAppear)
         }
-        .preferredColorScheme(effectiveColorScheme)
         .onAppear {
             guard !didFire else { return }
             didFire = true

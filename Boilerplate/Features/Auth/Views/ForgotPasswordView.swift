@@ -44,7 +44,6 @@ struct ForgotPasswordView: View {
             }
         }
         .loadingOverlay(viewModel?.isLoading ?? false)
-        .preferredColorScheme(.light)
         .toastOverlay(kind: .error, message: toastMessage, isPresented: $showToast)
         .onAppear {
             if viewModel == nil {

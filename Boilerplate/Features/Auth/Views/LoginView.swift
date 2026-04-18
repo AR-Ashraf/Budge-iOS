@@ -61,7 +61,6 @@ struct LoginView: View {
             // no toolbar actions on login (match web)
         }
         .loadingOverlay(viewModel?.isLoading ?? false)
-        .preferredColorScheme(.light)
         .toastOverlay(kind: .error, message: toastMessage, isPresented: $showToast)
         .onAppear {
             if viewModel == nil {

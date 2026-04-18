@@ -71,8 +71,7 @@ struct ChatSidebarDrawer: View {
     let onDismissKeyboard: () -> Void
 
     @Environment(AuthService.self) private var authService
-    @AppStorage("themePreference") private var themePreferenceRaw = "system"
-    @Environment(\.colorScheme) private var systemColorScheme
+    @Environment(ThemeController.self) private var themeController
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var searchQuery: String = ""
@@ -84,15 +83,7 @@ struct ChatSidebarDrawer: View {
     @State private var presented: Bool = false
     @State private var drawerOffsetX: CGFloat = 0
 
-    private var effectiveColorScheme: ColorScheme {
-        switch themePreferenceRaw {
-        case "light": return .light
-        case "dark": return .dark
-        default: return systemColorScheme
-        }
-    }
-
-    private var palette: BudgeChatPalette { BudgeChatPalette(colorScheme: effectiveColorScheme) }
+    private var palette: BudgeChatPalette { BudgeChatPalette(colorScheme: colorScheme) }
 
     private var drawerWidth: CGFloat { UIScreen.main.bounds.width }
 
@@ -186,7 +177,7 @@ struct ChatSidebarDrawer: View {
                 model.beginNewChat()
                 dismiss()
             } label: {
-                Image(effectiveColorScheme == .dark ? "brandDark" : "BrandSidebarLight")
+                Image(colorScheme == .dark ? "brandDark" : "BrandSidebarLight")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 150, height: 30)
@@ -198,7 +189,7 @@ struct ChatSidebarDrawer: View {
             Spacer()
 
             Button(action: toggleThemePreference) {
-                Image(systemName: effectiveColorScheme == .dark ? "sun.max.fill" : "moon.fill")
+                Image(systemName: colorScheme == .dark ? "sun.max.fill" : "moon.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(palette.bodyText.opacity(0.85))
                     .frame(width: 30, height: 30)
@@ -215,7 +206,7 @@ struct ChatSidebarDrawer: View {
     }
 
     private var searchRow: some View {
-        let placeholderColor = effectiveColorScheme == .dark
+        let placeholderColor = colorScheme == .dark
             ? palette.bodyText.opacity(0.55)
             : Color.black.opacity(0.55)
 
@@ -273,7 +264,7 @@ struct ChatSidebarDrawer: View {
                     .frame(width: 18, height: 18)
                 Text("Balance Sheet")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(effectiveColorScheme == .dark ? Color.white : palette.brandGreenDarkText)
+                    .foregroundStyle(colorScheme == .dark ? Color.white : palette.brandGreenDarkText)
                 Spacer()
             }
             .padding(.horizontal, 12)
@@ -410,7 +401,6 @@ struct ChatSidebarDrawer: View {
         .buttonStyle(.plain)
         .sheet(isPresented: $showProfileSheet) {
             ProfileSettingsSheet(
-                effectiveColorScheme: effectiveColorScheme,
                 palette: palette,
                 userName: authService.currentUser?.name ?? "Profile",
                 userEmail: authService.currentUser?.email ?? "",
@@ -473,14 +463,7 @@ struct ChatSidebarDrawer: View {
     }
 
     private func toggleThemePreference() {
-        switch themePreferenceRaw {
-        case "light":
-            themePreferenceRaw = "dark"
-        case "dark":
-            themePreferenceRaw = "light"
-        default:
-            themePreferenceRaw = (systemColorScheme == .dark) ? "light" : "dark"
-        }
+        themeController.toggleLightDark(currentSystemScheme: colorScheme)
     }
 
     @MainActor
@@ -503,7 +486,6 @@ struct ChatSidebarDrawer: View {
 // MARK: - Profile settings sheet (Apple-style)
 
 private struct ProfileSettingsSheet: View {
-    let effectiveColorScheme: ColorScheme
     let palette: BudgeChatPalette
     let userName: String
     let userEmail: String
@@ -597,7 +579,6 @@ private struct ProfileSettingsSheet: View {
                 }
             }
         }
-        .preferredColorScheme(effectiveColorScheme)
         .presentationDetents([.fraction(0.72), .large])
         .presentationDragIndicator(.visible)
     }
