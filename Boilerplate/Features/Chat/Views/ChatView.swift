@@ -1,11 +1,12 @@
 import SwiftUI
+import UIKit
 
 struct ChatView: View {
     @Environment(AuthService.self) private var authService
     @Environment(ChatService.self) private var chatService
+    @Environment(OnboardingService.self) private var onboarding
 
     @State private var model: ChatViewModel?
-    @State private var scrolledToBottom = true
 
     var body: some View {
         Group {
@@ -16,15 +17,13 @@ struct ChatView: View {
                     .task { await bootstrapIfPossible() }
             }
         }
-        .background(AppTheme.Colors.background.ignoresSafeArea())
     }
 
     @MainActor
     private func bootstrapIfPossible() async {
         guard let uid = authService.currentUser?.id else { return }
-        // For now: single default chat per user. Later you can add chat list + chat creation.
         let chatId = "default"
-        let vm = ChatViewModel(chatService: chatService, uid: uid, chatId: chatId)
+        let vm = ChatViewModel(chatService: chatService, onboarding: onboarding, uid: uid, chatId: chatId)
         vm.start()
         self.model = vm
     }
@@ -38,167 +37,324 @@ struct ChatView: View {
 
 private struct ChatScreen: View {
     @Bindable var model: ChatViewModel
+    @Environment(Router.self) private var router
+    @Environment(\.colorScheme) private var colorScheme
 
-    var body: some View {
-        VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
-                        // Agentic progress (server-driven via approvalStates[0].agenticSteps)
-                        if let steps = model.approvalState?.agenticSteps, !steps.isEmpty {
-                            AgenticProgressView(steps: steps)
-                                .padding(.top, 12)
-                        }
-
-                        ForEach(model.messages) { m in
-                            MessageBubble(
-                                role: m.role,
-                                text: m.content,
-                                shouldAnimateAssistant: (m.role == "assistant") && model.shouldAnimateAssistantMessage(id: m.id),
-                                onAssistantAnimationFinished: {
-                                    model.markAnimated(id: m.id)
-                                }
-                            )
-                                .id(m.id)
-                        }
-
-                        Color.clear
-                            .frame(height: 1)
-                            .id("bottom")
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                }
-                .onChange(of: model.messages.count) { _, _ in
-                    // Auto-scroll to bottom for new assistant responses.
-                    withAnimation(.easeOut(duration: 0.25)) {
-                        proxy.scrollTo("bottom", anchor: .bottom)
-                    }
-                }
-            }
-
-            // Approval UI (server-owned)
-            if let approval = model.approvalState, approval.awaitingApproval {
-                ApprovalCard(
-                    approval: approval.pendingApprovals.indices.contains(approval.currentApprovalIndex)
-                    ? approval.pendingApprovals[approval.currentApprovalIndex]
-                    : nil,
-                    onAllow: { choice in Task { await model.approve(choice: choice) } },
-                    onDeny: { Task { await model.deny() } }
-                )
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-            }
-
-            InputBar(
-                text: $model.messageDraft,
-                isSending: model.isSending,
-                onSend: { Task { await model.send() } }
-            )
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(AppTheme.Colors.background)
-        }
-        .navigationTitle("Chat")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-private struct MessageBubble: View {
-    let role: String
-    let text: String
-    let shouldAnimateAssistant: Bool
-    let onAssistantAnimationFinished: () -> Void
-
-    var isUser: Bool { role == "user" }
-
-    var body: some View {
-        HStack {
-            if isUser { Spacer(minLength: 40) }
-            VStack(alignment: .leading, spacing: 6) {
-                if !isUser, shouldAnimateAssistant {
-                    TypingMarkdownView(fullText: text, charactersPerSecond: 70) {
-                        onAssistantAnimationFinished()
-                    }
-                    .font(.body)
-                    .foregroundStyle(AppTheme.Colors.textPrimary)
-                } else {
-                    ForEach(ChatContentParser.parse(text)) { part in
-                        switch part {
-                        case .markdown(_, let md):
-                            MarkdownView(text: md)
-                                .font(.body)
-                                .foregroundStyle(isUser ? AppTheme.Colors.budgeGreenDarkText : AppTheme.Colors.textPrimary)
-                        case .visualization(_, let spec):
-                            VisualizationView(spec: spec)
-                        }
-                    }
-                }
-            }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 12)
-            .background(isUser ? AppTheme.Colors.budgeGreenPrimary : AppTheme.Colors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            if !isUser { Spacer(minLength: 40) }
-        }
-    }
-}
-
-private struct InputBar: View {
-    @Binding var text: String
-    let isSending: Bool
-    let onSend: () -> Void
     @State private var transcriber = SpeechTranscriber()
+    @State private var readAloud = ReadAloudController()
+    /// From `UIScrollView`: `maxContentOffsetY - contentOffset.y`; near 0 at bottom, larger when scrolled up.
+    @State private var scrollDistanceFromBottom: CGFloat = 0
+    /// Coalesces rapid `scrollTo` requests (send + Firestore updates) so the list does not animate up/down repeatedly.
+    @State private var scrollCoalesceToken: UInt64 = 0
+    /// Message count when this screen first appeared; used so we only run insertion motion for new assistant turns, not when opening long history.
+    @State private var assistantAnimationBaselineCount: Int?
+
+    private var palette: BudgeChatPalette { BudgeChatPalette(colorScheme: colorScheme) }
+
+    private var isEmpty: Bool { model.messages.isEmpty }
+
+    /// Web parity: show chevron when the user has scrolled away from the latest messages (not pinned to bottom).
+    private var showScrollFab: Bool {
+        !isEmpty && scrollDistanceFromBottom > 80
+    }
+
+    /// Resign first responder so the chat field keyboard dismisses when tapping outside the composer.
+    private func dismissChatKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    /// Debounced scroll: only the latest request within ~140ms runs (avoids stacked `withAnimation` jank).
+    private func scheduleScrollToBottom(_ proxy: ScrollViewProxy, animated: Bool, reason: String) {
+        scrollCoalesceToken += 1
+        let token = scrollCoalesceToken
+        ChatUIDebugLogger.scrollScheduled(reason: reason, animated: animated, token: token)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(140))
+            guard token == scrollCoalesceToken else {
+                ChatUIDebugLogger.scrollCancelled(staleToken: token, currentToken: scrollCoalesceToken)
+                return
+            }
+            ChatUIDebugLogger.scrollApplied(reason: reason, animated: animated, token: token)
+            if animated {
+                withAnimation(.easeOut(duration: 0.28)) {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            } else {
+                proxy.scrollTo("bottom", anchor: .bottom)
+            }
+        }
+    }
 
     var body: some View {
-        HStack(spacing: 12) {
-            TextField("Ask Anything…", text: $text, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .lineLimit(1...5)
+        ScrollViewReader { proxy in
+            VStack(spacing: 0) {
+                ChatChromeTopBar(
+                    currencyCode: model.headerCurrencyCode,
+                    balanceText: model.headerBalanceDisplay,
+                    onLogoTap: { model.beginNewChat() },
+                    onCurrencyTap: {
+                        Task { await model.refreshFinanceHeader() }
+                    },
+                    onMenuTap: { router.navigate(to: .settings) }
+                )
+                .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
 
-            Button {
-                Task {
-                    switch transcriber.state {
-                    case .recording:
-                        transcriber.stop()
-                    default:
-                        await transcriber.start()
+                ZStack(alignment: .bottomTrailing) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            // Always laid out (unlike tail cells in LazyVStack) so UIScrollView KVO stays attached.
+                            Color.clear
+                                .frame(width: 1, height: 1)
+                                .background(
+                                    ChatScrollOffsetReader { distance in
+                                        scrollDistanceFromBottom = distance
+                                    }
+                                )
+
+                            LazyVStack(alignment: .leading, spacing: 12) {
+                                if isEmpty {
+                                    ChatWelcomeHero()
+                                        .frame(maxWidth: .infinity)
+                                        .transition(.opacity.combined(with: .move(edge: .top)))
+                                }
+
+                                if let steps = model.approvalState?.agenticSteps, !steps.isEmpty {
+                                    AgenticProgressView(steps: steps)
+                                        .padding(.top, 4)
+                                }
+
+                                ForEach(model.messages) { m in
+                                    let animateAssistantInsertion =
+                                        m.role == "assistant"
+                                        && m.id == model.messages.last?.id
+                                        && model.messages.count > (assistantAnimationBaselineCount ?? 0)
+                                    MessageRow(
+                                        message: m,
+                                        readAloud: readAloud,
+                                        animateAssistantInsertion: animateAssistantInsertion
+                                    )
+                                    .id(m.id)
+                                }
+
+                                Color.clear
+                                    .frame(height: 1)
+                                    .id("bottom")
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
+                    .scrollDismissesKeyboard(.immediately)
+                    .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
+
+                    ChatScrollDownFab(visible: showScrollFab) {
+                        ChatUIDebugLogger.fabScrollTapped()
+                        withAnimation(.easeOut(duration: 0.28)) {
+                            proxy.scrollTo("bottom", anchor: .bottom)
+                        }
+                    }
+                    .padding(.trailing, 12)
+                    .padding(.bottom, 8)
+                }
+
+                if isEmpty {
+                    StarterPromptStrip { picked in
+                        model.messageDraft = picked
+                    }
+                    .padding(.horizontal, 12)
+                    .transition(.opacity)
+                    .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
+                }
+
+                if let approval = model.approvalState, approval.awaitingApproval {
+                    ApprovalCard(
+                        approval: approval.pendingApprovals.indices.contains(approval.currentApprovalIndex)
+                            ? approval.pendingApprovals[approval.currentApprovalIndex]
+                            : nil,
+                        onAllow: { choice in Task { await model.approve(choice: choice) } },
+                        onDeny: { Task { await model.deny() } }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
+                }
+
+                ChatComposerChrome(
+                    text: $model.messageDraft,
+                    isSending: model.isSending,
+                    awaitingAssistantReply: model.awaitingAssistantReply,
+                    onSend: {
+                        Task {
+                            await transcriber.stopRecording()
+                            await model.send()
+                        }
+                    },
+                    transcriber: transcriber
+                )
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(palette.screenBackground)
+                .onChange(of: transcriber.transcript) { _, newValue in
+                    if case .recording = transcriber.state {
+                        model.messageDraft = newValue
                     }
                 }
-            } label: {
-                Image(systemName: transcriber.state == .recording ? "mic.fill" : "mic")
             }
-            .buttonStyle(.bordered)
-
-            Button {
-                onSend()
-            } label: {
-                Text("Send")
-                    .font(.headline)
+            .background(palette.screenBackground.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
+            .animation(.easeInOut(duration: 0.35), value: isEmpty)
+            .onAppear {
+                if assistantAnimationBaselineCount == nil, !model.messages.isEmpty {
+                    assistantAnimationBaselineCount = model.messages.count
+                }
+                scheduleScrollToBottom(proxy, animated: false, reason: "onAppear")
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(isSending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        }
-        .onChange(of: transcriber.transcript) { _, newValue in
-            // Mirror web behavior: transcription fills the draft while recording.
-            if transcriber.state == .recording {
-                text = newValue
+            .onChange(of: model.messages.isEmpty) { _, empty in
+                if empty { assistantAnimationBaselineCount = nil }
+            }
+            .onChange(of: model.messages.count) { old, new in
+                if assistantAnimationBaselineCount == nil, new > 0 {
+                    let delta = new - old
+                    if delta > 2 {
+                        assistantAnimationBaselineCount = new
+                    } else {
+                        assistantAnimationBaselineCount = old
+                    }
+                }
+                scheduleScrollToBottom(proxy, animated: true, reason: "messages.count")
+            }
+            .onChange(of: model.messages.last?.id) { _, _ in
+                scheduleScrollToBottom(proxy, animated: true, reason: "messages.last.id")
+            }
+            .onChange(of: model.messages.last?.content) { _, _ in
+                if !model.messages.isEmpty {
+                    // Streaming updates: scroll without animation to avoid fighting `withAnimation` on every token.
+                    scheduleScrollToBottom(proxy, animated: false, reason: "messages.last.content")
+                }
+            }
+            .onChange(of: model.awaitingAssistantReply) { _, awaiting in
+                if awaiting {
+                    ChatUIDebugLogger.composerLockChanged(locked: true, reason: "ChatScreen.awaitingAssistantReply")
+                    dismissChatKeyboard()
+                }
+            }
+            .onChange(of: model.approvalState?.agenticSteps.count) { _, count in
+                if let count, count > 0 {
+                    ChatUIDebugLogger.agenticStepsVisible(count: count)
+                }
             }
         }
     }
 }
+
+// MARK: - Assistant entrance motion
+
+private struct AssistantMessageRevealModifier: ViewModifier {
+    let shouldAnimate: Bool
+    let reduceMotion: Bool
+
+    @State private var revealed = false
+
+    func body(content: Content) -> some View {
+        let motion = shouldAnimate && !reduceMotion
+
+        content
+            .opacity(motion ? (revealed ? 1 : 0) : 1)
+            .offset(y: motion ? (revealed ? 0 : 10) : 0)
+            .scaleEffect(motion ? (revealed ? 1 : 0.98) : 1)
+            .onAppear {
+                guard motion else {
+                    revealed = true
+                    return
+                }
+                guard !revealed else { return }
+                withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
+                    revealed = true
+                }
+            }
+            .onChange(of: shouldAnimate) { _, animate in
+                if !animate { revealed = true }
+            }
+    }
+}
+
+// MARK: - Message row
+
+private struct MessageRow: View {
+    let message: ChatService.ChatMessage
+    @Bindable var readAloud: ReadAloudController
+    /// When true, the assistant block uses a soft fade + slide (new reply only; see baseline in ``ChatScreen``).
+    var animateAssistantInsertion: Bool = false
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var isUser: Bool { message.role == "user" }
+    private var palette: BudgeChatPalette { BudgeChatPalette(colorScheme: colorScheme) }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            if isUser { Spacer(minLength: 36) }
+
+            VStack(alignment: .leading, spacing: 0) {
+                if isUser {
+                    Text(message.content)
+                        .font(.body)
+                        .foregroundStyle(palette.bodyText)
+                        .multilineTextAlignment(.leading)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 14)
+                        .background(palette.userMessageBubbleBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(palette.borderPrimary, lineWidth: 2)
+                        )
+                } else {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(ChatContentParser.parse(message.content)) { part in
+                            switch part {
+                            case .markdown(_, let md):
+                                MarkdownView(text: md, style: .assistantMarkdown)
+                            case .visualization(_, let spec):
+                                VisualizationView(spec: spec)
+                            }
+                        }
+                        AssistantMessageToolbar(
+                            messageId: message.id,
+                            rawText: message.content,
+                            readAloud: readAloud
+                        )
+                    }
+                    .padding(.vertical, 6)
+                    .modifier(
+                        AssistantMessageRevealModifier(shouldAnimate: animateAssistantInsertion, reduceMotion: reduceMotion)
+                    )
+                }
+            }
+            .frame(maxWidth: isUser ? 280 : .infinity, alignment: isUser ? .trailing : .leading)
+
+            if !isUser { Spacer(minLength: 8) }
+        }
+    }
+}
+
+// MARK: - Agentic / approval
 
 private struct AgenticProgressView: View {
     let steps: [ChatService.AgenticStep]
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
+        let palette = BudgeChatPalette(colorScheme: colorScheme)
         VStack(alignment: .center, spacing: 6) {
             ForEach(steps) { step in
                 HStack(spacing: 8) {
                     StepIcon(status: step.status)
                     Text(step.message)
                         .font(.subheadline)
-                        .foregroundStyle(AppTheme.Colors.textSecondary)
+                        .foregroundStyle(palette.bodyText.opacity(0.85))
                 }
             }
         }
@@ -263,11 +419,14 @@ private struct ApprovalCard: View {
     let onAllow: (_ choice: String?) -> Void
     let onDeny: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
+        let palette = BudgeChatPalette(colorScheme: colorScheme)
         VStack(alignment: .leading, spacing: 12) {
             Text(approval?.message ?? "Proceed with the requested changes?")
                 .font(.subheadline)
-                .foregroundStyle(AppTheme.Colors.textPrimary)
+                .foregroundStyle(palette.bodyText)
 
             HStack(spacing: 12) {
                 Button("Deny") { onDeny() }
@@ -287,8 +446,11 @@ private struct ApprovalCard: View {
             }
         }
         .padding(14)
-        .background(AppTheme.Colors.surface)
+        .background(palette.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(palette.borderPrimary.opacity(0.5), lineWidth: 1)
+        )
     }
 }
-

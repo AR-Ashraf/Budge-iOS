@@ -1,6 +1,9 @@
 import SwiftUI
 
-/// App theme configuration for colors and typography
+/// App theme configuration for colors and typography.
+///
+/// Chat screens use ``BudgeChatPalette`` for light/dark parity with web `charaTheme2.tsx`
+/// (backgrounds, borders, brand green, markdown accent).
 enum AppTheme {
     // MARK: - Colors
 
@@ -17,6 +20,12 @@ enum AppTheme {
         static let budgeAuthBorder = Color(hex: "#D2D2D780") // border.primary.light
         static let budgeGreenPrimary = Color(hex: "#71C635") // brandGreenPrimary
         static let budgeGreenDarkText = Color(hex: "#163300") // brandGreenDarkText
+
+        /// Web `secondary` — `#161617` (dark) / `#FFFFFF` (light). Chat bubbles, composer, FAB (dark), etc.
+        /// Prefer ``BudgeChatPalette/secondarySurface`` in SwiftUI; this is for call sites that have `ColorScheme`.
+        static func budgeSecondarySurface(colorScheme: ColorScheme) -> Color {
+            BudgeChatPalette(colorScheme: colorScheme).secondarySurface
+        }
 
         // Background colors
         static let background = Color(uiColor: .systemBackground)
