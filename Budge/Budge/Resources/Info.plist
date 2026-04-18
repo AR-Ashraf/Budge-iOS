@@ -35,6 +35,8 @@
 	<false/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Budge uses your microphone to let you dictate chat messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Budge needs access to your photo library so you can choose a profile picture.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Budge uses speech recognition to transcribe your voice into chat messages.</string>
 	<key>UIApplicationSceneManifest</key>

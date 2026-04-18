@@ -85,6 +85,8 @@ targets:
         product: FirebaseFirestore
       - package: Firebase
         product: FirebaseFunctions
+      - package: Firebase
+        product: FirebaseStorage
       - package: GoogleSignIn
         product: GoogleSignIn
       - package: MarkdownUI
@@ -103,6 +105,7 @@ targets:
         FirebaseAppDelegateProxyEnabled: false
         NSMicrophoneUsageDescription: "Budge uses your microphone to let you dictate chat messages."
         NSSpeechRecognitionUsageDescription: "Budge uses speech recognition to transcribe your voice into chat messages."
+        NSPhotoLibraryUsageDescription: "Budge needs access to your photo library so you can choose a profile picture."
         CFBundleURLTypes:
           - CFBundleTypeRole: Editor
             CFBundleURLSchemes:

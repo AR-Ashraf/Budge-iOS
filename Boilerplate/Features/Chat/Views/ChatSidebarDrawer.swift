@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private enum ChatHistorySectioning {
     static func groupThreadsByDateSection(_ threads: [ChatService.ChatThread]) -> [String: [ChatService.ChatThread]] {
@@ -363,14 +364,14 @@ struct ChatSidebarDrawer: View {
             showProfileSheet = true
         } label: {
             HStack(spacing: 12) {
-                Circle()
-                    .fill(palette.borderPrimary.opacity(0.35))
-                    .frame(width: 34, height: 34)
-                    .overlay(
-                        Text(initials(from: authService.currentUser?.name))
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(palette.bodyText.opacity(0.85))
-                    )
+                ProfileAvatarCircle(
+                    name: authService.currentUser?.name,
+                    photoURL: authService.currentUser?.avatarURL,
+                    cachedImage: authService.cachedProfilePhoto,
+                    size: 34,
+                    placeholderFill: palette.borderPrimary.opacity(0.35),
+                    textColor: palette.bodyText
+                )
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(authService.currentUser?.name ?? "Profile")
@@ -483,6 +484,48 @@ struct ChatSidebarDrawer: View {
     }
 }
 
+// MARK: - Profile photo library (UIImagePickerController)
+
+private struct ProfilePhotoLibraryPicker: UIViewControllerRepresentable {
+    @Binding var pickedImage: UIImage?
+    var onDismiss: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .photoLibrary
+        picker.allowsEditing = true
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: ProfilePhotoLibraryPicker
+
+        init(_ parent: ProfilePhotoLibraryPicker) {
+            self.parent = parent
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.onDismiss()
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            let img = (info[.editedImage] ?? info[.originalImage]) as? UIImage
+            parent.pickedImage = img
+            parent.onDismiss()
+        }
+    }
+}
+
 // MARK: - Profile settings sheet (Apple-style)
 
 private struct ProfileSettingsSheet: View {
@@ -493,94 +536,159 @@ private struct ProfileSettingsSheet: View {
     let onOpenReminders: () -> Void
     let onOpenAccounts: () -> Void
 
+    @Environment(AuthService.self) private var authService
     @Environment(\.dismiss) private var dismiss
+
+    @State private var showPhotoLibraryPicker = false
+    @State private var pickedUIImage: UIImage?
+    @State private var isUploadingPhoto = false
+    @State private var uploadErrorMessage: String?
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    HStack(spacing: 12) {
-                        Circle()
-                            .fill(palette.borderPrimary.opacity(0.35))
-                            .frame(width: 44, height: 44)
-                            .overlay(
-                                Text(initials(from: userName))
-                                    .font(.headline.weight(.bold))
-                                    .foregroundStyle(palette.bodyText.opacity(0.9))
-                            )
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(userName)
-                                .font(.headline.weight(.semibold))
-                                .foregroundStyle(palette.bodyText)
-                                .lineLimit(1)
-                            if !userEmail.isEmpty {
-                                Text(userEmail)
-                                    .font(.subheadline)
-                                    .foregroundStyle(palette.bodyText.opacity(0.6))
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 6)
-                }
-                .listRowBackground(palette.cardSurface)
-
-                Section {
-                    NavigationLink {
-                        HelpMenuView(palette: palette)
-                    } label: {
-                        settingsRow(
-                            title: "Help",
-                            systemImage: "questionmark.circle",
-                            showChevron: true
-                        )
-                    }
-
-                    Button(action: onOpenReminders) {
-                        settingsRow(title: "My Reminders", systemImage: "bell", showChevron: false)
-                    }
-
-                    Button(action: onOpenAccounts) {
-                        settingsRow(title: "My Accounts", systemImage: "creditcard", showChevron: false)
-                    }
-                }
-                .listRowBackground(palette.cardSurface)
-
-                Section {
-                    Button(role: .destructive) {
-                        onLogout()
-                    } label: {
-                        settingsRow(title: "Logout", systemImage: "rectangle.portrait.and.arrow.right", showChevron: false, destructive: true)
-                    }
-                }
-                .listRowBackground(palette.cardSurface)
-
-                Section {
-                    HStack {
-                        Text("Version")
-                            .foregroundStyle(palette.bodyText.opacity(0.7))
-                        Spacer()
-                        Text(appVersionString())
-                            .foregroundStyle(palette.bodyText.opacity(0.55))
-                    }
-                    .font(.footnote)
-                }
-                .listRowBackground(palette.cardSurface)
-            }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-            .background(palette.screenBackground)
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(palette.brandGreenPrimary)
-                }
-            }
+            profileSettingsList
         }
         .presentationDetents([.fraction(0.72), .large])
         .presentationDragIndicator(.visible)
+    }
+
+    @ViewBuilder
+    private var profileSettingsList: some View {
+        List {
+            Section {
+                HStack(spacing: 12) {
+                    Button {
+                        showPhotoLibraryPicker = true
+                    } label: {
+                        ZStack {
+                            ProfileAvatarCircle(
+                                name: userName,
+                                photoURL: authService.currentUser?.avatarURL,
+                                cachedImage: authService.cachedProfilePhoto,
+                                size: 44,
+                                placeholderFill: palette.borderPrimary.opacity(0.35),
+                                textColor: palette.bodyText
+                            )
+                            if isUploadingPhoto {
+                                Circle()
+                                    .fill(Color.black.opacity(0.4))
+                                    .frame(width: 44, height: 44)
+                                ProgressView()
+                                    .tint(.white)
+                            }
+                        }
+                        .accessibilityLabel("Change profile photo")
+                        .accessibilityHint("Opens your photo library")
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isUploadingPhoto)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(userName)
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(palette.bodyText)
+                            .lineLimit(1)
+                        if !userEmail.isEmpty {
+                            Text(userEmail)
+                                .font(.subheadline)
+                                .foregroundStyle(palette.bodyText.opacity(0.6))
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+            .listRowBackground(palette.cardSurface)
+
+            Section {
+                NavigationLink {
+                    HelpMenuView(palette: palette)
+                } label: {
+                    settingsRow(
+                        title: "Help",
+                        systemImage: "questionmark.circle",
+                        showChevron: false
+                    )
+                }
+
+                Button(action: onOpenReminders) {
+                    settingsRow(title: "My Reminders", systemImage: "bell", showChevron: false)
+                }
+
+                Button(action: onOpenAccounts) {
+                    settingsRow(title: "My Accounts", systemImage: "creditcard", showChevron: false)
+                }
+            }
+            .listRowBackground(palette.cardSurface)
+
+            Section {
+                Button(role: .destructive) {
+                    onLogout()
+                } label: {
+                    settingsRow(title: "Logout", systemImage: "rectangle.portrait.and.arrow.right", showChevron: false, destructive: true)
+                }
+            }
+            .listRowBackground(palette.cardSurface)
+
+            Section {
+                HStack {
+                    Text("Version")
+                        .foregroundStyle(palette.bodyText.opacity(0.7))
+                    Spacer()
+                    Text(appVersionString())
+                        .foregroundStyle(palette.bodyText.opacity(0.55))
+                }
+                .font(.footnote)
+            }
+            .listRowBackground(palette.cardSurface)
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(palette.screenBackground)
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") { dismiss() }
+                    .foregroundStyle(palette.brandGreenPrimary)
+            }
+        }
+        .alert("Couldn’t update photo", isPresented: Binding(
+            get: { uploadErrorMessage != nil },
+            set: { if !$0 { uploadErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { uploadErrorMessage = nil }
+        } message: {
+            Text(uploadErrorMessage ?? "")
+        }
+        .sheet(isPresented: $showPhotoLibraryPicker) {
+            ProfilePhotoLibraryPicker(pickedImage: $pickedUIImage) {
+                showPhotoLibraryPicker = false
+            }
+            .ignoresSafeArea()
+        }
+        .onChange(of: pickedUIImage) { _, image in
+            Task { await uploadPickedUIImage(image) }
+        }
+    }
+
+    @MainActor
+    private func uploadPickedUIImage(_ image: UIImage?) async {
+        guard let image else { return }
+        isUploadingPhoto = true
+        defer {
+            isUploadingPhoto = false
+            pickedUIImage = nil
+        }
+        do {
+            guard let jpeg = ProfilePhotoProcessing.jpegForUpload(image: image) else {
+                uploadErrorMessage = "We couldn’t read that image. Try another photo."
+                return
+            }
+            try await authService.uploadProfilePhoto(jpegData: jpeg)
+        } catch {
+            uploadErrorMessage = error.localizedDescription
+        }
     }
 
     @ViewBuilder
@@ -601,14 +709,6 @@ private struct ProfileSettingsSheet: View {
         }
         .contentShape(Rectangle())
         .padding(.vertical, 4)
-    }
-
-    private func initials(from name: String) -> String {
-        let parts = name.split(separator: " ").map(String.init).filter { !$0.isEmpty }
-        if parts.isEmpty { return "U" }
-        let first = parts.first?.prefix(1) ?? "U"
-        let last = parts.count > 1 ? (parts.last?.prefix(1) ?? "") : ""
-        return String(first + last).uppercased()
     }
 
     private func appVersionString() -> String {

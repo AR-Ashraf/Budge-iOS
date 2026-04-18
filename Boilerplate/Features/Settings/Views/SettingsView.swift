@@ -107,16 +107,14 @@ struct SettingsView: View {
                     ProfileView()
                 } label: {
                     HStack(spacing: UIConstants.Spacing.md) {
-                        // Avatar
-                        ZStack {
-                            Circle()
-                                .fill(Color.accentColor.opacity(0.2))
-
-                            Text(user.initials)
-                                .font(.headline)
-                                .foregroundStyle(Color.accentColor)
-                        }
-                        .frame(width: UIConstants.AvatarSize.medium, height: UIConstants.AvatarSize.medium)
+                        ProfileAvatarCircle(
+                            name: user.name,
+                            photoURL: user.avatarURL,
+                            cachedImage: authService.cachedProfilePhoto,
+                            size: UIConstants.AvatarSize.medium,
+                            placeholderFill: Color.accentColor.opacity(0.2),
+                            textColor: Color.accentColor
+                        )
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(user.name)

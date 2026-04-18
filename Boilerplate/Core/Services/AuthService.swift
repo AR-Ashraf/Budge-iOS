@@ -1,8 +1,10 @@
 import Foundation
+import UIKit
 import FirebaseCore
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFunctions
+import FirebaseStorage
 import GoogleSignIn
 
 /// Authentication service managing user session state
@@ -13,6 +15,9 @@ final class AuthService {
 
     /// Current authenticated user
     private(set) var currentUser: User?
+
+    /// Locally cached profile image (disk-backed after first load; updated on sign-in and after uploads).
+    private(set) var cachedProfilePhoto: UIImage?
 
     /// Whether the user is currently authenticated
     var isAuthenticated: Bool {
@@ -36,6 +41,8 @@ final class AuthService {
     }
 
     private var functions: Functions { Functions.functions(region: "us-central1") }
+
+    private var storage: Storage { Storage.storage() }
 
     private func kitSubscribeIfPossible(uid: String, email: String, name: String) async {
         guard !email.isEmpty else { return }
@@ -119,11 +126,17 @@ final class AuthService {
             // Ensure Firestore user document exists (merge-safe).
             let email = authResult.user.email ?? ""
             let name = authResult.user.displayName ?? googleUser.profile?.name ?? email
-            let userDoc: [String: Any] = [
+            // Web parity (`authUtils.ts`): persist Google profile image for sidebar / profile UI.
+            let photoFromAuth = authResult.user.photoURL?.absoluteString
+                ?? googleUser.profile?.imageURL(withDimension: UInt(256))?.absoluteString
+            var userDoc: [String: Any] = [
                 "email": email,
                 "name": name,
                 "createdAt": FieldValue.serverTimestamp()
             ]
+            if let photoFromAuth, !photoFromAuth.isEmpty {
+                userDoc["photoURL"] = photoFromAuth
+            }
             try await Firestore.firestore().collection("users").document(authResult.user.uid).setData(userDoc, merge: true)
 
             await hydrateUser(authResult.user)
@@ -330,11 +343,70 @@ final class AuthService {
         }
     }
 
+    /// Uploads a profile picture to Firebase Storage, updates Firestore `photoURL`, Firebase Auth profile, and local `currentUser`.
+    @MainActor
+    func uploadProfilePhoto(jpegData: Data) async throws {
+        guard let firebaseUser = Auth.auth().currentUser else {
+            throw AuthError.unknown("Not signed in")
+        }
+        guard !jpegData.isEmpty, jpegData.count < 5_000_000 else {
+            throw AuthError.unknown("Image is too large or invalid.")
+        }
+
+        let uid = firebaseUser.uid
+        let path = "profile_photos/\(uid).jpg"
+        let ref = storage.reference(withPath: path)
+
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            ref.putData(jpegData, metadata: metadata) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+
+        let downloadURL = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
+            ref.downloadURL { url, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let url {
+                    continuation.resume(returning: url)
+                } else {
+                    continuation.resume(throwing: AuthError.unknown("Missing profile image URL."))
+                }
+            }
+        }
+
+        try await Firestore.firestore().collection("users").document(uid).setData(
+            ["photoURL": downloadURL.absoluteString],
+            merge: true
+        )
+
+        let change = firebaseUser.createProfileChangeRequest()
+        change.photoURL = downloadURL
+        try await change.commitChanges()
+
+        try ProfilePhotoCache.store(jpegData, uid: uid, remoteFingerprint: downloadURL.absoluteString)
+        cachedProfilePhoto = UIImage(data: jpegData)
+
+        await hydrateUser(Auth.auth().currentUser)
+        Logger.shared.auth("Profile photo updated", level: .info)
+    }
+
     /// Sign out the current user
     @MainActor
     func signOut() async {
-        // Clear local state first
+        let uid = Auth.auth().currentUser?.uid
         currentUser = nil
+        cachedProfilePhoto = nil
+        if let uid {
+            ProfilePhotoCache.clear(for: uid)
+        }
         try? Auth.auth().signOut()
 
         Logger.shared.auth("User signed out", level: .info)
@@ -344,6 +416,7 @@ final class AuthService {
     private func hydrateUser(_ firebaseUser: FirebaseAuth.User?) async {
         guard let firebaseUser else {
             currentUser = nil
+            cachedProfilePhoto = nil
             return
         }
 
@@ -351,12 +424,17 @@ final class AuthService {
         let email = firebaseUser.email ?? ""
         var name = firebaseUser.displayName ?? ""
         var createdAt: Date? = nil
+        // Prefer Firebase Auth (OAuth providers set this); fall back to Firestore `photoURL` (web parity).
+        var avatarURL = firebaseUser.photoURL
 
         do {
             let snap = try await Firestore.firestore().collection("users").document(uid).getDocument()
             if let data = snap.data() {
                 if name.isEmpty, let storedName = data["name"] as? String { name = storedName }
                 if let ts = data["createdAt"] as? Timestamp { createdAt = ts.dateValue() }
+                if avatarURL == nil, let photoStr = data["photoURL"] as? String, !photoStr.isEmpty {
+                    avatarURL = URL(string: photoStr)
+                }
             }
         } catch {
             // Non-fatal; we can proceed with FirebaseAuth fields.
@@ -364,13 +442,26 @@ final class AuthService {
 
         if name.isEmpty { name = email }
 
+        // Show disk-backed avatar immediately when it matches this session’s photo URL.
+        cachedProfilePhoto = ProfilePhotoCache.cachedImageIfFresh(for: uid, remoteURL: avatarURL)
+
         currentUser = User(
             id: uid,
             name: name,
             email: email,
-            avatarURL: nil,
+            avatarURL: avatarURL,
             createdAt: createdAt
         )
+
+        // One network fetch after sign-in / refresh when cache is missing or URL changed; then persist locally.
+        Task { [weak self] in
+            let image = await ProfilePhotoCache.loadOrFetch(uid: uid, remoteURL: avatarURL)
+            await MainActor.run {
+                guard let self else { return }
+                guard Auth.auth().currentUser?.uid == uid else { return }
+                self.cachedProfilePhoto = image
+            }
+        }
     }
 }
 

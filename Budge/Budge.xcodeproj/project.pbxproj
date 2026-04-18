@@ -11,6 +11,7 @@
 		03D2DF085872699A467B488D /* BudgeChatPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD256CE39DADEFA825E5DB36 /* BudgeChatPalette.swift */; };
 		04974EF78DE1455E1D015B3F /* KnowFromPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87266EFA2A8579A4CE57E6BB /* KnowFromPlatformView.swift */; };
 		05D30A3F8AFB637BC090974F /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C971C2ED9FF7FE78D6159617 /* ChatService.swift */; };
+		0D56037C3FCD3CAD3A53A678 /* ProfileAvatarCircle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23EB0F613BA1A65BA02ECC16 /* ProfileAvatarCircle.swift */; };
 		0D8B7FFB50169EF24F698F27 /* JourneyCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9F23A125737F0D38A1FDA9 /* JourneyCompletionView.swift */; };
 		0F2E4DE45B27BAFEBB246A0D /* AuthMiddleware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65ADC93083624D4B33DF6342 /* AuthMiddleware.swift */; };
 		0F69569F65A7FD734DAF7A25 /* OnboardingGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6523658557514C270BB5 /* OnboardingGateView.swift */; };
@@ -21,6 +22,7 @@
 		189523B38AF389298E75FF74 /* ManageBalanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC057B14F78E920689558CA /* ManageBalanceView.swift */; };
 		19C4F9927BDF98194842DD00 /* Date+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B5295A050518F1708738EBA /* Date+Extensions.swift */; };
 		19E45294A2D29C12674E912E /* Router.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7011BD4A47A0653BD15955B7 /* Router.swift */; };
+		1A60177FF5C06C130D48F3A2 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 69693263C03CB41B1DE14D18 /* MarkdownUI */; };
 		1B2646BBAB2A1A0E51B9F4FF /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC0C8365CB738F559ACC6318 /* ChatViewModel.swift */; };
 		1EE4582E4CA9E662E765B156 /* ExampleListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F23F8FC6763F2B0B4D0CBE7 /* ExampleListViewModel.swift */; };
 		1FC06E16B298BC4A214F7457 /* NoAssistantTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40C0618FF8465B1BD3946C37 /* NoAssistantTextField.swift */; };
@@ -65,6 +67,8 @@
 		84FFEAE9F38C5CA1549D0467 /* OnboardingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4857D0D13A11ADC3538B6C3 /* OnboardingService.swift */; };
 		89CC4F9825E57281D59FB463 /* ChatSuggestedPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE5C1C6F5B0E32E015DCECC9 /* ChatSuggestedPrompts.swift */; };
 		8C5FDD83AE4BEDA99D0B6233 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC9BBEE6C94628E574C86F51 /* SettingsView.swift */; };
+		8E53C93C90D283F2E50523C3 /* ProfilePhotoProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EDF0C42672CC5A9A016F11C /* ProfilePhotoProcessing.swift */; };
+		C8F2A91B4D6E503C84739201B /* ProfilePhotoCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F2A91B4D6E503C84739201A /* ProfilePhotoCache.swift */; };
 		8F1521A91BD6144C2B08006F /* FinancialCategoryFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3881D1FC78004A4964E3BD /* FinancialCategoryFlowView.swift */; };
 		92EBEF32860A8987D285C1FD /* ChainedTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B458CC3A980C40131F9E5A /* ChainedTextField.swift */; };
 		95EDE2AB7D29EF42FA1ED5AF /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742F11AD529777DFF6E41CA5 /* AppTheme.swift */; };
@@ -75,7 +79,7 @@
 		A15A1208548AF647430100EE /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51141364E73523126CDB11F /* Toast.swift */; };
 		A1D832C3E2D0611C3AF27ED9 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 555565523EE250EA229BB204 /* FirebaseFunctions */; };
 		A46D872D57E3567B8FF7235F /* APIEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C8F08ACBF0FC1D473F9E068 /* APIEndpoint.swift */; };
-		A4D60E14D38BFC0BFBF01B5D /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 69693263C03CB41B1DE14D18 /* MarkdownUI */; };
+		A4D60E14D38BFC0BFBF01B5D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 54214337E06E7EE72CAFC5D0 /* GoogleSignIn */; };
 		A536C4A8D642AB20E7BC0E1C /* WhyUseBudgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E0147AD2753EE915EF6D66 /* WhyUseBudgeView.swift */; };
 		A5736C337CA7C79145E95BC7 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AEFBE04879EE16BDF15BFE4 /* APIClient.swift */; };
 		A9BC79C0FBD9CD01C9BF2FEC /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADFFC455BD0A0E443CD776BD /* ForgotPasswordView.swift */; };
@@ -109,7 +113,7 @@
 		F6BFCFD3DB6FA9AB4E8BE989 /* FinancialSetupExpenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE0A3814AE7ADDFE2E73BE2 /* FinancialSetupExpenseView.swift */; };
 		F97C092400ABE6649AD1F35D /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C53C5AE3CB99DCB1F86BF84 /* Logger.swift */; };
 		FA31ACA3B5A50DCF63B2711D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = C35C31C87147D41961D21093 /* FirebaseFirestore */; };
-		FEE337BD72C1DD6D24F79F0B /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 54214337E06E7EE72CAFC5D0 /* GoogleSignIn */; };
+		FEE337BD72C1DD6D24F79F0B /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = D29E015DCB58760B5A34F2C7 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -128,6 +132,7 @@
 		1A5B6568A8AB5B7DDF26D54C /* SwiftDataContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataContainer.swift; sourceTree = "<group>"; };
 		1C7F779A30416BC5E6DF2BE9 /* UIApplication+TopViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIApplication+TopViewController.swift"; sourceTree = "<group>"; };
 		1F23F8FC6763F2B0B4D0CBE7 /* ExampleListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleListViewModel.swift; sourceTree = "<group>"; };
+		23EB0F613BA1A65BA02ECC16 /* ProfileAvatarCircle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarCircle.swift; sourceTree = "<group>"; };
 		2510C7B96A895D0A135A7292 /* ChatSidebarDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSidebarDrawer.swift; sourceTree = "<group>"; };
 		2651D55D3F617EE991F9DE42 /* BudgeAssistantMarkdownTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgeAssistantMarkdownTheme.swift; sourceTree = "<group>"; };
 		2A520507391EEA8EB5780FD1 /* MockAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockAuthService.swift; sourceTree = "<group>"; };
@@ -150,6 +155,8 @@
 		5884550E9D42D6BC48BCBE06 /* ReadAloudController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadAloudController.swift; sourceTree = "<group>"; };
 		5B5295A050518F1708738EBA /* Date+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Extensions.swift"; sourceTree = "<group>"; };
 		5BBFCC3D71342C3476F925F7 /* UserDefaultsWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsWrapper.swift; sourceTree = "<group>"; };
+		5EDF0C42672CC5A9A016F11C /* ProfilePhotoProcessing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoProcessing.swift; sourceTree = "<group>"; };
+		C8F2A91B4D6E503C84739201A /* ProfilePhotoCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoCache.swift; sourceTree = "<group>"; };
 		6259532E0C532DDB4150E874 /* ExampleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleListView.swift; sourceTree = "<group>"; };
 		6315960B316EA23511F68381 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		6376E2F6F2F8CAA3CE0D26A6 /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
@@ -234,8 +241,9 @@
 				D6D7BECE875C5F9579A6A67F /* FirebaseAuth in Frameworks */,
 				FA31ACA3B5A50DCF63B2711D /* FirebaseFirestore in Frameworks */,
 				A1D832C3E2D0611C3AF27ED9 /* FirebaseFunctions in Frameworks */,
-				FEE337BD72C1DD6D24F79F0B /* GoogleSignIn in Frameworks */,
-				A4D60E14D38BFC0BFBF01B5D /* MarkdownUI in Frameworks */,
+				FEE337BD72C1DD6D24F79F0B /* FirebaseStorage in Frameworks */,
+				A4D60E14D38BFC0BFBF01B5D /* GoogleSignIn in Frameworks */,
+				1A60177FF5C06C130D48F3A2 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -546,6 +554,7 @@
 		889F9CB7889B2FC64A0431B1 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				23EB0F613BA1A65BA02ECC16 /* ProfileAvatarCircle.swift */,
 				A96698D51359723D19258E50 /* Buttons */,
 				AF0ABC60549390EC0CE36C89 /* Feedback */,
 				EA8AE6522CD90D990937F9AE /* Forms */,
@@ -570,6 +579,7 @@
 				247EA0DD4A18BB5249349C19 /* Extensions */,
 				EA99BFC23C7D9CFA6153EF06 /* Styles */,
 				5C08362C70988A2EE5028DE1 /* Types */,
+				B0406094B629FDAD2204EC9B /* Utils */,
 				4CA0A9E9DD3D71174D827F70 /* ViewModifiers */,
 			);
 			path = Shared;
@@ -652,6 +662,15 @@
 				74571EE2F960C5D2FCD158ED /* Assets.xcassets */,
 			);
 			path = Budge;
+			sourceTree = "<group>";
+		};
+		B0406094B629FDAD2204EC9B /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				C8F2A91B4D6E503C84739201A /* ProfilePhotoCache.swift */,
+				5EDF0C42672CC5A9A016F11C /* ProfilePhotoProcessing.swift */,
+			);
+			path = Utils;
 			sourceTree = "<group>";
 		};
 		B8FBB60FD3EF12BDD5B2B606 /* Boilerplate */ = {
@@ -749,6 +768,7 @@
 				BE7B7DB08468A15DA78D60FD /* FirebaseAuth */,
 				C35C31C87147D41961D21093 /* FirebaseFirestore */,
 				555565523EE250EA229BB204 /* FirebaseFunctions */,
+				D29E015DCB58760B5A34F2C7 /* FirebaseStorage */,
 				54214337E06E7EE72CAFC5D0 /* GoogleSignIn */,
 				69693263C03CB41B1DE14D18 /* MarkdownUI */,
 			);
@@ -843,7 +863,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nROOT_DIR=\"${SRCROOT}\"\nSPEC_FILE=\"${ROOT_DIR}/project.yml\"\nPROJECT_FILE=\"${ROOT_DIR}/Budge.xcodeproj/project.pbxproj\"\nXCODEGEN_BIN=\"${ROOT_DIR}/../tools/xcodegen/xcodegen/bin/xcodegen\"\n\n# Avoid recursion / parallel regenerations.\nLOCK_FILE=\"/tmp/budge_xcodegen.lock\"\nif [ -f \"${LOCK_FILE}\" ]; then\n  exit 0\nfi\n\n# If the project doesn't exist yet, generate it.\nif [ ! -f \"${PROJECT_FILE}\" ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\n  exit 0\nfi\n\n# Regenerate only if:\n# - project.yml changed, OR\n# - any Swift file under sources changed since last generation.\nNEEDS_REGEN=0\nif [ \"${SPEC_FILE}\" -nt \"${PROJECT_FILE}\" ]; then\n  NEEDS_REGEN=1\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 0 ]; then\n  if /usr/bin/find \"${ROOT_DIR}/../Boilerplate\" \"${ROOT_DIR}/Budge\" -type f -name \"*.swift\" -newer \"${PROJECT_FILE}\" -print -quit | /usr/bin/grep -q .; then\n    NEEDS_REGEN=1\n  fi\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 1 ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\nfi\n";
+			shellScript = "set -euo pipefail\n\nROOT_DIR=\"/Users/ashraf/Documents/projects/Budge/ios/Budge\"\nSPEC_FILE=\"${ROOT_DIR}/project.yml\"\nPROJECT_FILE=\"${ROOT_DIR}/Budge.xcodeproj/project.pbxproj\"\nXCODEGEN_BIN=\"${ROOT_DIR}/../tools/xcodegen/xcodegen/bin/xcodegen\"\n\n# Avoid recursion / parallel regenerations.\nLOCK_FILE=\"/tmp/budge_xcodegen.lock\"\nif [ -f \"${LOCK_FILE}\" ]; then\n  exit 0\nfi\n\n# If the project doesn't exist yet, generate it.\nif [ ! -f \"${PROJECT_FILE}\" ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\n  exit 0\nfi\n\n# Regenerate only if:\n# - project.yml changed, OR\n# - any Swift file under sources changed since last generation.\nNEEDS_REGEN=0\nif [ \"${SPEC_FILE}\" -nt \"${PROJECT_FILE}\" ]; then\n  NEEDS_REGEN=1\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 0 ]; then\n  if /usr/bin/find \"${ROOT_DIR}/../Boilerplate\" \"${ROOT_DIR}/Budge\" -type f -name \"*.swift\" -newer \"${PROJECT_FILE}\" -print -quit | /usr/bin/grep -q .; then\n    NEEDS_REGEN=1\n  fi\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 1 ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -922,6 +942,9 @@
 				E07C0E4EF0CA513E68DE13BB /* OnboardingPage.swift in Sources */,
 				84FFEAE9F38C5CA1549D0467 /* OnboardingService.swift in Sources */,
 				00E9F6E8EC11D84FF05763B9 /* PrimaryButton.swift in Sources */,
+				0D56037C3FCD3CAD3A53A678 /* ProfileAvatarCircle.swift in Sources */,
+				8E53C93C90D283F2E50523C3 /* ProfilePhotoProcessing.swift in Sources */,
+				C8F2A91B4D6E503C84739201B /* ProfilePhotoCache.swift in Sources */,
 				9E3E8ADCE33709FB788BD784 /* ReadAloudController.swift in Sources */,
 				540FBE530AC4055B24D11C88 /* Route.swift in Sources */,
 				19E45294A2D29C12674E912E /* Router.swift in Sources */,
@@ -1254,6 +1277,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = EDB4414368BBCA208BC154EE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		D29E015DCB58760B5A34F2C7 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EDB4414368BBCA208BC154EE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
