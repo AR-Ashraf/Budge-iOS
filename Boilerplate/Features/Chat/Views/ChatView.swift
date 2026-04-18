@@ -22,8 +22,8 @@ struct ChatView: View {
     @MainActor
     private func bootstrapIfPossible() async {
         guard let uid = authService.currentUser?.id else { return }
-        let chatId = "default"
-        let vm = ChatViewModel(chatService: chatService, onboarding: onboarding, uid: uid, chatId: chatId)
+        // Always start on a fresh thread when entering chat (parity with web “new chat”; avoids reopening legacy `default`).
+        let vm = ChatViewModel(chatService: chatService, onboarding: onboarding, uid: uid, chatId: UUID().uuidString)
         vm.start()
         self.model = vm
     }
@@ -47,6 +47,8 @@ private struct ChatScreen: View {
     @State private var scrollDistanceFromBottom: CGFloat = 0
     /// Coalesces rapid `scrollTo` requests (send + Firestore updates) so the list does not animate up/down repeatedly.
     @State private var scrollCoalesceToken: UInt64 = 0
+    /// Cancels follow-up scrolls when switching threads again before delays complete.
+    @State private var threadChangeScrollToken: UInt64 = 0
     /// Message count when this screen first appeared; used so we only run insertion motion for new assistant turns, not when opening long history.
     @State private var assistantAnimationBaselineCount: Int?
 
@@ -113,6 +115,22 @@ private struct ChatScreen: View {
                     proxy.scrollTo("bottom", anchor: .bottom)
                 }
             } else {
+                proxy.scrollTo("bottom", anchor: .bottom)
+            }
+        }
+    }
+
+    /// Switching threads does not re-run `onAppear`; Firestore also loads async. Retry without animation so the anchor has final height.
+    private func scheduleScrollToBottomAfterThreadChange(_ proxy: ScrollViewProxy) {
+        scrollCoalesceToken += 1
+        threadChangeScrollToken += 1
+        let token = threadChangeScrollToken
+        Task { @MainActor in
+            // Sleep before each attempt: immediate, then ~90ms / ~120ms / ~200ms as layout + Firestore settle.
+            let sleepBeforeMs: [UInt64] = [0, 90, 120, 200]
+            for ms in sleepBeforeMs {
+                try? await Task.sleep(for: .milliseconds(ms))
+                guard token == threadChangeScrollToken else { return }
                 proxy.scrollTo("bottom", anchor: .bottom)
             }
         }
@@ -262,6 +280,9 @@ private struct ChatScreen: View {
             .onChange(of: model.messages.isEmpty) { _, empty in
                 if empty { assistantAnimationBaselineCount = nil }
             }
+            .onChange(of: model.chatId) { _, _ in
+                scheduleScrollToBottomAfterThreadChange(proxy)
+            }
             .onChange(of: model.messages.count) { old, new in
                 if assistantAnimationBaselineCount == nil, new > 0 {
                     let delta = new - old
@@ -271,8 +292,11 @@ private struct ChatScreen: View {
                         assistantAnimationBaselineCount = old
                     }
                 }
+                // Opening a thread (0 → N) or first paint: non-animated scroll lands reliably once layout exists.
+                let initialBatch = old == 0 && new > 0
+                let animated = !initialBatch && !model.awaitingAssistantReply
                 // While the server pipeline is running, animated scroll fights agentic layout and reads as vertical flicker.
-                scheduleScrollToBottom(proxy, animated: !model.awaitingAssistantReply)
+                scheduleScrollToBottom(proxy, animated: animated)
             }
             .onChange(of: model.messages.last?.id) { _, _ in
                 scheduleScrollToBottom(proxy, animated: !model.awaitingAssistantReply)

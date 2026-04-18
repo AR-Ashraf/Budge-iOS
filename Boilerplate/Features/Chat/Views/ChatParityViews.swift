@@ -203,7 +203,249 @@ struct VoiceWaveformBars: View {
     }
 }
 
-// MARK: - Composer
+// MARK: - Composer (multiline + expanded sheet)
+
+private struct ComposerInnerWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private enum ComposerMultilineMetrics {
+    static let maxVisibleLines = 6
+    static let overflowAtLine = 7
+    static var bodyFont: UIFont { UIFont.preferredFont(forTextStyle: .body) }
+    static var lineHeight: CGFloat { max(1, bodyFont.lineHeight) }
+    static var maxContentHeight: CGFloat { lineHeight * CGFloat(maxVisibleLines) }
+
+    /// Line estimate without touching `UITextView.layoutManager` (avoids TextKit 1 compatibility mode + layout churn).
+    static func estimatedLineCount(text: String, font: UIFont, contentWidth: CGFloat) -> Int {
+        let w = max(1, contentWidth)
+        guard !text.isEmpty else { return 1 }
+        let ns = text as NSString
+        let h = ns.boundingRect(
+            with: CGSize(width: w, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: font],
+            context: nil
+        ).height
+        guard h.isFinite, h >= 0 else { return 1 }
+        let lh = max(1, font.lineHeight)
+        return max(1, Int(ceil(h / lh)))
+    }
+}
+
+/// Multiline input with growing height up to `maxVisibleLines`, then internal scroll + overflow callback for expand affordance.
+private struct ComposerMultilineTextView: UIViewRepresentable {
+    @Binding var text: String
+    var isEditable: Bool
+    var textColor: UIColor
+    var availableWidth: CGFloat
+
+    var onContentHeightChange: (CGFloat) -> Void
+    var onNeedsExpandChromeChange: (Bool) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIView(context: Context) -> UITextView {
+        let tv = UITextView()
+        tv.delegate = context.coordinator
+        tv.font = ComposerMultilineMetrics.bodyFont
+        tv.textColor = textColor
+        tv.backgroundColor = .clear
+        tv.textContainerInset = UIEdgeInsets(top: 4, left: 0, bottom: 4, right: 0)
+        tv.textContainer.lineFragmentPadding = 0
+        tv.textContainer.widthTracksTextView = true
+        tv.textContainer.lineBreakMode = .byWordWrapping
+        tv.isScrollEnabled = false
+        tv.autocorrectionType = .yes
+        tv.autocapitalizationType = .sentences
+        tv.keyboardDismissMode = .interactive
+        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        tv.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        tv.text = text
+        return tv
+    }
+
+    func updateUIView(_ uiView: UITextView, context: Context) {
+        context.coordinator.parent = self
+
+        if uiView.font == nil { uiView.font = ComposerMultilineMetrics.bodyFont }
+        uiView.textColor = textColor
+        uiView.isEditable = isEditable
+        uiView.isSelectable = isEditable
+
+        let textSynced: Bool
+        if uiView.text != text {
+            uiView.text = text
+            textSynced = true
+        } else {
+            textSynced = false
+        }
+
+        if !isEditable {
+            uiView.resignFirstResponder()
+        }
+
+        let widthTick = abs(context.coordinator.lastLayoutWidth - availableWidth) > 0.5
+        if widthTick {
+            context.coordinator.lastLayoutWidth = availableWidth
+        }
+
+        if textSynced || widthTick {
+            context.coordinator.layoutAndReport(uiView)
+        }
+    }
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        var parent: ComposerMultilineTextView
+        var lastLayoutWidth: CGFloat = -1
+        private var lastEmittedHeight: CGFloat = -1
+        private var lastEmittedExpand: Bool?
+
+        init(_ parent: ComposerMultilineTextView) {
+            self.parent = parent
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            let next = textView.text ?? ""
+            if parent.text != next {
+                parent.text = next
+            }
+            layoutAndReport(textView)
+        }
+
+        func layoutAndReport(_ textView: UITextView) {
+            let font = textView.font ?? ComposerMultilineMetrics.bodyFont
+            let lineH = ComposerMultilineMetrics.lineHeight
+            let insetV = textView.textContainerInset.top + textView.textContainerInset.bottom
+            let layoutWidth = max(
+                1,
+                textView.bounds.width > 10 ? textView.bounds.width : parent.availableWidth
+            )
+            // Width available to wrapped text (matches typical UITextView layout).
+            let textWidth = max(
+                1,
+                layoutWidth - textView.textContainerInset.left - textView.textContainerInset.right
+                    - textView.textContainer.lineFragmentPadding * 2
+            )
+
+            // Do not assign a short `textContainer.size.height` (that clips layout and breaks scrolling past ~6 lines).
+            // `widthTracksTextView` keeps width in sync with the view bounds; height grows with content for measurement.
+            textView.layoutIfNeeded()
+            let fitSize = textView.sizeThatFits(CGSize(width: layoutWidth, height: .greatestFiniteMagnitude))
+            let rawContentH = max(0, fitSize.height)
+            let contentH = rawContentH.isFinite ? rawContentH : lineH
+
+            let lines = ComposerMultilineMetrics.estimatedLineCount(
+                text: textView.text ?? "",
+                font: font,
+                contentWidth: textWidth
+            )
+            let needsExpandChrome = lines >= ComposerMultilineMetrics.overflowAtLine
+            let contentOverflowsViewport = contentH > ComposerMultilineMetrics.maxContentHeight + 0.5
+            textView.isScrollEnabled = needsExpandChrome || contentOverflowsViewport
+
+            let cappedForChrome = min(contentH, ComposerMultilineMetrics.maxContentHeight)
+            let displayH = max(lineH + insetV, cappedForChrome + insetV)
+            let safeDisplayH = displayH.isFinite ? displayH : (lineH + insetV)
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                let heightChanged = abs(safeDisplayH - self.lastEmittedHeight) >= 0.5
+                let expandChanged = self.lastEmittedExpand != needsExpandChrome
+                guard heightChanged || expandChanged else { return }
+                self.lastEmittedHeight = safeDisplayH
+                self.lastEmittedExpand = needsExpandChrome
+                self.parent.onContentHeightChange(safeDisplayH)
+                self.parent.onNeedsExpandChromeChange(needsExpandChrome)
+            }
+        }
+    }
+}
+
+/// Full-height draft editor opened from the inline composer when content reaches 7+ lines.
+private struct ChatExpandedComposerSheet: View {
+    @Binding var text: String
+    let palette: BudgeChatPalette
+    let isSending: Bool
+    let awaitingAssistantReply: Bool
+    let isProcessing: Bool
+    let onSend: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var editorFocused: Bool
+
+    private var hasText: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var isComposerDisabled: Bool {
+        isSending || isProcessing || awaitingAssistantReply
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack(alignment: .bottomTrailing) {
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $text)
+                        .font(.body)
+                        .foregroundStyle(palette.bodyText)
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 8)
+                        .padding(.bottom, 64)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .background(palette.inputInnerBackground)
+                        .focused($editorFocused)
+                        .disabled(isComposerDisabled)
+
+                    if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(awaitingAssistantReply ? "Budge is thinking…" : (isProcessing ? "Processing voice…" : "Ask Anything…"))
+                            .font(.body)
+                            .foregroundStyle(palette.bodyText.opacity(0.45))
+                            .padding(.horizontal, 18)
+                            .padding(.top, 16)
+                            .allowsHitTesting(false)
+                    }
+                }
+
+                Button {
+                    guard hasText else { return }
+                    onSend()
+                    dismiss()
+                } label: {
+                    let canSend = hasText && !isComposerDisabled
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(palette.brandGreenDarkText.opacity(canSend ? 1 : 0.45))
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(palette.brandGreenPrimary.opacity(canSend ? 1 : 0.38))
+                        )
+                        .shadow(color: Color.black.opacity(0.12), radius: 5, x: 0, y: 2)
+                }
+                .buttonStyle(.plain)
+                .disabled(!hasText || isComposerDisabled)
+                .padding(.trailing, 18)
+                .padding(.bottom, 18)
+                .accessibilityLabel("Send")
+            }
+            .navigationTitle("Message")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+        }
+        .presentationDragIndicator(.visible)
+        .onAppear {
+            editorFocused = true
+        }
+    }
+}
 
 struct ChatComposerChrome: View {
     @Binding var text: String
@@ -214,10 +456,11 @@ struct ChatComposerChrome: View {
     @Bindable var transcriber: SpeechTranscriber
 
     @Environment(\.colorScheme) private var colorScheme
-    @FocusState private var fieldFocused: Bool
 
-    /// After the composer unlocks (e.g. assistant finished), UIKit/SwiftUI often restores first responder; keep keyboard closed until the user taps the field.
-    @State private var allowTextFieldFocus: Bool = true
+    @State private var multilineContentHeight: CGFloat = 0
+    @State private var needsExpandChrome: Bool = false
+    @State private var showExpandedSheet: Bool = false
+    @State private var innerComposerWidth: CGFloat = 0
 
     private var palette: BudgeChatPalette { BudgeChatPalette(colorScheme: colorScheme) }
 
@@ -237,6 +480,21 @@ struct ChatComposerChrome: View {
         isSending || isProcessing || awaitingAssistantReply
     }
 
+    private var placeholderPrompt: String {
+        awaitingAssistantReply
+            ? "Budge is thinking…"
+            : (isProcessing ? "Processing voice…" : "Ask Anything…")
+    }
+
+    private var effectiveMultilineHeight: CGFloat {
+        let minH = ComposerMultilineMetrics.lineHeight + 8
+        let defaultH = ComposerMultilineMetrics.lineHeight * 2 + 8
+        let rawMeasured = multilineContentHeight > 0 ? multilineContentHeight : defaultH
+        let measured = rawMeasured.isFinite ? rawMeasured : defaultH
+        let maxH = ComposerMultilineMetrics.maxContentHeight + 8
+        return min(max(measured, minH), maxH)
+    }
+
     var body: some View {
         VStack(alignment: .trailing, spacing: 10) {
             VStack(alignment: .leading, spacing: 0) {
@@ -244,31 +502,68 @@ struct ChatComposerChrome: View {
                     VoiceWaveformBars(level: transcriber.meterLevel, palette: palette)
                         .accessibilityLabel("Recording")
                 } else {
-                    TextField(
-                        awaitingAssistantReply
-                            ? "Budge is thinking…"
-                            : (isProcessing ? "Processing voice…" : "Ask Anything…"),
-                        text: $text,
-                        axis: .vertical
-                    )
-                    .font(.body)
-                    .foregroundStyle(palette.bodyText)
-                    .lineLimit(1 ... 6)
-                    .focused($fieldFocused)
-                    .disabled(isComposerDisabled)
-                    .simultaneousGesture(
-                        TapGesture().onEnded {
-                            allowTextFieldFocus = true
+                    ZStack(alignment: .topLeading) {
+                        ComposerMultilineTextView(
+                            text: $text,
+                            isEditable: !isComposerDisabled,
+                            textColor: UIColor(palette.bodyText),
+                            availableWidth: max(1, innerComposerWidth),
+                            onContentHeightChange: { h in
+                                if abs(h - multilineContentHeight) > 0.5 {
+                                    multilineContentHeight = h
+                                }
+                            },
+                            onNeedsExpandChromeChange: { flag in
+                                if needsExpandChrome != flag {
+                                    needsExpandChrome = flag
+                                }
+                            }
+                        )
+                        .frame(maxWidth: .infinity)
+                        .frame(height: effectiveMultilineHeight)
+                        .accessibilityLabel("Message")
+
+                        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text(placeholderPrompt)
+                                .font(.body)
+                                .foregroundStyle(palette.bodyText.opacity(0.45))
+                                .padding(.horizontal, 2)
+                                .padding(.top, 6)
+                                .allowsHitTesting(false)
                         }
-                    )
+                    }
                 }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(key: ComposerInnerWidthKey.self, value: geo.size.width)
+                }
+            )
+            .onPreferenceChange(ComposerInnerWidthKey.self) { w in
+                guard w > 0.5 else { return }
+                if abs(w - innerComposerWidth) > 0.5 {
+                    innerComposerWidth = w
+                }
+            }
             .background(palette.inputInnerBackground)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
-            HStack {
+            HStack(alignment: .center, spacing: 10) {
+                if needsExpandChrome, !isRecording {
+                    Button {
+                        showExpandedSheet = true
+                    } label: {
+                        Image(systemName: "rectangle.expand.vertical")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(palette.bodyText.opacity(0.88))
+                            .frame(width: 44, height: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Expand message editor")
+                }
                 Spacer(minLength: 0)
                 primaryCTA
             }
@@ -281,29 +576,16 @@ struct ChatComposerChrome: View {
                 .strokeBorder(palette.borderPrimary, lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0 : 0.12), radius: 10, x: 0, y: 4)
-        .onChange(of: fieldFocused) { _, focused in
-            if focused, !allowTextFieldFocus {
-                fieldFocused = false
-                return
-            }
-        }
-        .onChange(of: isSending) { _, sending in
-            if sending {
-                allowTextFieldFocus = false
-                fieldFocused = false
-            }
-        }
-        .onChange(of: awaitingAssistantReply) { _, awaiting in
-            fieldFocused = false
-            allowTextFieldFocus = false
-            if !awaiting {
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(32))
-                    if !allowTextFieldFocus { fieldFocused = false }
-                    try? await Task.sleep(for: .milliseconds(120))
-                    if !allowTextFieldFocus { fieldFocused = false }
-                }
-            }
+        .sheet(isPresented: $showExpandedSheet) {
+            ChatExpandedComposerSheet(
+                text: $text,
+                palette: palette,
+                isSending: isSending,
+                awaitingAssistantReply: awaitingAssistantReply,
+                isProcessing: isProcessing,
+                onSend: onSend
+            )
+            .presentationDetents([.large])
         }
     }
 

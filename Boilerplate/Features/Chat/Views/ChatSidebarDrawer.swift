@@ -181,7 +181,8 @@ struct ChatSidebarDrawer: View {
                 Image(colorScheme == .dark ? "brandDark" : "BrandSidebarLight")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 150, height: 30)
+                    .frame(height: 30)
+                    .frame(maxWidth: 150, alignment: .leading)
                     .clipped()
                     .accessibilityLabel("Budge")
             }
