@@ -139,6 +139,9 @@ final class ChatService {
     // MARK: - Approvals
 
     func resolveLatestApproval(uid: String, chatId: String, approved: Bool, choice: String? = nil) async throws {
+        // Web (`useChatHandler` approve/deny) performs API work then updates the **chat** document’s `approvalStates`
+        // and messages. iOS uses the lightweight **approvals** subcollection contract below; parity with web’s full
+        // client-side approval pipeline is server-dependent—extend here if product requires the same writes as web.
         // Server currently creates an approval decision doc; the simplest client contract:
         // resolve the most recent awaiting doc.
         let q = approvalsRef(uid: uid, chatId: chatId)

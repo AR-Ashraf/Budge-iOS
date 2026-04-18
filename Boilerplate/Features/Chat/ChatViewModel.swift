@@ -48,13 +48,10 @@ final class ChatViewModel {
                 Task { @MainActor in
                     guard let self else { return }
                     let lastRole = msgs.last.map(\.role)
-                    let suffix = msgs.last.map { String($0.id.suffix(6)) } ?? ""
-                    ChatUIDebugLogger.messagesUpdated(count: msgs.count, lastRole: lastRole, lastIdSuffix: suffix)
 
                     self.messages = msgs
                     if self.awaitingAssistantReply, lastRole == "assistant" {
                         self.awaitingAssistantReply = false
-                        ChatUIDebugLogger.assistantReplyCleared()
                     }
                 }
             }
@@ -85,7 +82,6 @@ final class ChatViewModel {
         messageDraft = ""
         approvalState = nil
         awaitingAssistantReply = false
-        ChatUIDebugLogger.awaitingAssistantChanged(false)
         start()
         Task { await refreshFinanceHeader() }
     }
@@ -121,20 +117,16 @@ final class ChatViewModel {
     func send() async {
         let text = messageDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        ChatUIDebugLogger.sendStarted(textLength: text.count)
         isSending = true
         messageDraft = ""
+        awaitingAssistantReply = true
         defer { isSending = false }
         do {
             try await chatService.sendUserMessage(uid: uid, chatId: chatId, text: text)
-            awaitingAssistantReply = true
-            ChatUIDebugLogger.awaitingAssistantChanged(true)
             await refreshFinanceHeader()
-            ChatUIDebugLogger.sendFinished(success: true)
         } catch {
             messageDraft = text
             awaitingAssistantReply = false
-            ChatUIDebugLogger.sendFinished(success: false)
         }
     }
 

@@ -64,17 +64,49 @@ private struct ChatScreen: View {
     }
 
     /// Debounced scroll: only the latest request within ~140ms runs (avoids stacked `withAnimation` jank).
-    private func scheduleScrollToBottom(_ proxy: ScrollViewProxy, animated: Bool, reason: String) {
+    /// Merges Firestore `agenticSteps` with a local classify row. Suppresses **stale** snapshots where every step is
+    /// still `completed`/`failed` from the **previous** turn (Firestore often delivers that briefly before the new pipeline writes).
+    private func effectiveAgenticSteps(for model: ChatViewModel) -> [ChatService.AgenticStep]? {
+        let fs = model.approvalState?.agenticSteps
+        let awaiting = model.awaitingAssistantReply
+        let lastIsUser = model.messages.last?.role == "user"
+        let awaitingUserTurn = awaiting && lastIsUser
+        let optimisticClassify: [ChatService.AgenticStep] = [
+            ChatService.AgenticStep(
+                id: "classify",
+                message: "Understanding your request",
+                status: "in_progress"
+            ),
+        ]
+
+        if let steps = fs, !steps.isEmpty {
+            if Self.firestoreAgenticLooksStaleFromPriorTurn(steps: steps) {
+                if awaitingUserTurn { return optimisticClassify }
+                if awaiting, !lastIsUser { return nil }
+                return steps
+            }
+            return steps
+        }
+
+        if awaitingUserTurn {
+            return optimisticClassify
+        }
+        return nil
+    }
+
+    /// Prior-turn pipeline often leaves all steps terminal until the next `updateAgenticStepsInChatDoc` — treat as stale while awaiting a reply for the latest user bubble.
+    private static func firestoreAgenticLooksStaleFromPriorTurn(steps: [ChatService.AgenticStep]) -> Bool {
+        steps.allSatisfy { $0.status == "completed" || $0.status == "failed" }
+    }
+
+    private func scheduleScrollToBottom(_ proxy: ScrollViewProxy, animated: Bool) {
         scrollCoalesceToken += 1
         let token = scrollCoalesceToken
-        ChatUIDebugLogger.scrollScheduled(reason: reason, animated: animated, token: token)
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(140))
             guard token == scrollCoalesceToken else {
-                ChatUIDebugLogger.scrollCancelled(staleToken: token, currentToken: scrollCoalesceToken)
                 return
             }
-            ChatUIDebugLogger.scrollApplied(reason: reason, animated: animated, token: token)
             if animated {
                 withAnimation(.easeOut(duration: 0.28)) {
                     proxy.scrollTo("bottom", anchor: .bottom)
@@ -83,6 +115,14 @@ private struct ChatScreen: View {
                 proxy.scrollTo("bottom", anchor: .bottom)
             }
         }
+    }
+
+    /// Last index of a user message in the thread (for anchoring agentic / approval below that turn).
+    private static func lastUserMessageIndex(in messages: [ChatService.ChatMessage]) -> Int? {
+        for index in messages.indices.reversed() where messages[index].role == "user" {
+            return index
+        }
+        return nil
     }
 
     var body: some View {
@@ -102,7 +142,7 @@ private struct ChatScreen: View {
                 ZStack(alignment: .bottomTrailing) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
-                            // Always laid out (unlike tail cells in LazyVStack) so UIScrollView KVO stays attached.
+                            // Anchor for scroll offset KVO (see ``ChatScrollOffsetReader``).
                             Color.clear
                                 .frame(width: 1, height: 1)
                                 .background(
@@ -111,29 +151,42 @@ private struct ChatScreen: View {
                                     }
                                 )
 
-                            LazyVStack(alignment: .leading, spacing: 12) {
+                            // `VStack` (not `LazyVStack`) so agentic rows under the last user bubble keep stable Y positions
+                            // when Firestore appends steps; LazyVStack remeasured siblings and caused visible jumps.
+                            VStack(alignment: .leading, spacing: 12) {
                                 if isEmpty {
                                     ChatWelcomeHero()
                                         .frame(maxWidth: .infinity)
                                         .transition(.opacity.combined(with: .move(edge: .top)))
                                 }
 
-                                if let steps = model.approvalState?.agenticSteps, !steps.isEmpty {
-                                    AgenticProgressView(steps: steps)
-                                        .padding(.top, 4)
-                                }
+                                let msgs = model.messages
+                                let lastUserIdx = Self.lastUserMessageIndex(in: msgs)
 
-                                ForEach(model.messages) { m in
+                                ForEach(Array(msgs.enumerated()), id: \.element.id) { index, m in
                                     let animateAssistantInsertion =
                                         m.role == "assistant"
-                                        && m.id == model.messages.last?.id
-                                        && model.messages.count > (assistantAnimationBaselineCount ?? 0)
+                                        && m.id == msgs.last?.id
+                                        && msgs.count > (assistantAnimationBaselineCount ?? 0)
                                     MessageRow(
                                         message: m,
                                         readAloud: readAloud,
                                         animateAssistantInsertion: animateAssistantInsertion
                                     )
                                     .id(m.id)
+
+                                    if index == lastUserIdx {
+                                        ChatTurnInterstitialView(
+                                            approval: model.approvalState,
+                                            agenticSteps: effectiveAgenticSteps(for: model),
+                                            lastMessageRole: msgs.last?.role,
+                                            onAllow: { choice in Task { await model.approve(choice: choice) } },
+                                            onDeny: { Task { await model.deny() } },
+                                            onDismissKeyboard: dismissChatKeyboard
+                                        )
+                                        .id("interstitial-after-\(m.id)")
+                                        .transaction { $0.animation = nil }
+                                    }
                                 }
 
                                 Color.clear
@@ -148,7 +201,6 @@ private struct ChatScreen: View {
                     .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
 
                     ChatScrollDownFab(visible: showScrollFab) {
-                        ChatUIDebugLogger.fabScrollTapped()
                         withAnimation(.easeOut(duration: 0.28)) {
                             proxy.scrollTo("bottom", anchor: .bottom)
                         }
@@ -163,19 +215,6 @@ private struct ChatScreen: View {
                     }
                     .padding(.horizontal, 12)
                     .transition(.opacity)
-                    .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
-                }
-
-                if let approval = model.approvalState, approval.awaitingApproval {
-                    ApprovalCard(
-                        approval: approval.pendingApprovals.indices.contains(approval.currentApprovalIndex)
-                            ? approval.pendingApprovals[approval.currentApprovalIndex]
-                            : nil,
-                        onAllow: { choice in Task { await model.approve(choice: choice) } },
-                        onDeny: { Task { await model.deny() } }
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
                     .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
                 }
 
@@ -207,7 +246,7 @@ private struct ChatScreen: View {
                 if assistantAnimationBaselineCount == nil, !model.messages.isEmpty {
                     assistantAnimationBaselineCount = model.messages.count
                 }
-                scheduleScrollToBottom(proxy, animated: false, reason: "onAppear")
+                scheduleScrollToBottom(proxy, animated: false)
             }
             .onChange(of: model.messages.isEmpty) { _, empty in
                 if empty { assistantAnimationBaselineCount = nil }
@@ -221,27 +260,73 @@ private struct ChatScreen: View {
                         assistantAnimationBaselineCount = old
                     }
                 }
-                scheduleScrollToBottom(proxy, animated: true, reason: "messages.count")
+                // While the server pipeline is running, animated scroll fights agentic layout and reads as vertical flicker.
+                scheduleScrollToBottom(proxy, animated: !model.awaitingAssistantReply)
             }
             .onChange(of: model.messages.last?.id) { _, _ in
-                scheduleScrollToBottom(proxy, animated: true, reason: "messages.last.id")
+                scheduleScrollToBottom(proxy, animated: !model.awaitingAssistantReply)
             }
             .onChange(of: model.messages.last?.content) { _, _ in
                 if !model.messages.isEmpty {
                     // Streaming updates: scroll without animation to avoid fighting `withAnimation` on every token.
-                    scheduleScrollToBottom(proxy, animated: false, reason: "messages.last.content")
+                    scheduleScrollToBottom(proxy, animated: false)
                 }
             }
             .onChange(of: model.awaitingAssistantReply) { _, awaiting in
                 if awaiting {
-                    ChatUIDebugLogger.composerLockChanged(locked: true, reason: "ChatScreen.awaitingAssistantReply")
                     dismissChatKeyboard()
                 }
             }
-            .onChange(of: model.approvalState?.agenticSteps.count) { _, count in
-                if let count, count > 0 {
-                    ChatUIDebugLogger.agenticStepsVisible(count: count)
+        }
+    }
+}
+
+// MARK: - Inline agentic + approval (after last user message)
+
+/// Firestore-driven approval and agentic steps, shown **below the latest user bubble** (web `ChatSection` order: approval then agentic). Agentic hides while the latest message is an assistant reply.
+private struct ChatTurnInterstitialView: View {
+    let approval: ChatService.ApprovalState?
+    /// Merged Firestore + optimistic classify row (see `ChatScreen.effectiveAgenticSteps`).
+    let agenticSteps: [ChatService.AgenticStep]?
+    let lastMessageRole: String?
+    let onAllow: (String?) -> Void
+    let onDeny: () -> Void
+    let onDismissKeyboard: () -> Void
+
+    private var currentApprovalItem: ChatService.ApprovalItem? {
+        guard let approval, approval.awaitingApproval else { return nil }
+        guard approval.pendingApprovals.indices.contains(approval.currentApprovalIndex) else { return nil }
+        return approval.pendingApprovals[approval.currentApprovalIndex]
+    }
+
+    private var showApproval: Bool {
+        approval?.awaitingApproval == true
+    }
+
+    private var showAgentic: Bool {
+        guard let steps = agenticSteps, !steps.isEmpty else { return false }
+        return lastMessageRole != "assistant"
+    }
+
+    var body: some View {
+        Group {
+            if showApproval || showAgentic {
+                VStack(alignment: .leading, spacing: 12) {
+                    if showApproval {
+                        ApprovalCard(
+                            approval: currentApprovalItem,
+                            onAllow: onAllow,
+                            onDeny: onDeny
+                        )
+                    }
+                    if showAgentic, let steps = agenticSteps {
+                        AgenticProgressView(steps: steps)
+                            .padding(40)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 2)
+                .simultaneousGesture(TapGesture().onEnded { onDismissKeyboard() })
             }
         }
     }
@@ -346,19 +431,59 @@ private struct AgenticProgressView: View {
 
     @Environment(\.colorScheme) private var colorScheme
 
+    /// One “current” row at a time: completed/failed history, then the first pending or in_progress row (matches web pacing + Firestore snapshots).
+    private var visibleSteps: [ChatService.AgenticStep] {
+        Self.visibleAgenticSteps(steps)
+    }
+
+    private static func visibleAgenticSteps(_ steps: [ChatService.AgenticStep]) -> [ChatService.AgenticStep] {
+        guard !steps.isEmpty else { return [] }
+        var end = 0
+        while end < steps.count && (steps[end].status == "completed" || steps[end].status == "failed") {
+            end += 1
+        }
+        if end < steps.count {
+            return Array(steps[0 ... end])
+        }
+        return steps
+    }
+
     var body: some View {
         let palette = BudgeChatPalette(colorScheme: colorScheme)
-        VStack(alignment: .center, spacing: 6) {
-            ForEach(steps) { step in
-                HStack(spacing: 8) {
+        return VStack(alignment: .center, spacing: 6) {
+            ForEach(visibleSteps) { step in
+                HStack(alignment: .center, spacing: 8) {
                     StepIcon(status: step.status)
                     Text(step.message)
                         .font(.subheadline)
-                        .foregroundStyle(palette.bodyText.opacity(0.85))
+                        .foregroundStyle(textColor(for: step.status, palette: palette))
+                        .multilineTextAlignment(.center)
                 }
+                .frame(maxWidth: .infinity)
+                .opacity(rowOpacity(for: step.status))
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 4)
+        // Keep step rows from inheriting implicit layout animations when Firestore updates statuses.
+        .animation(nil, value: steps.map { "\($0.id):\($0.status)" }.joined(separator: "|"))
+    }
+
+    private func rowOpacity(for status: String) -> Double {
+        switch status {
+        case "in_progress": return 0.8
+        case "pending": return 0.6
+        default: return 1
+        }
+    }
+
+    private func textColor(for status: String, palette: BudgeChatPalette) -> Color {
+        switch status {
+        case "completed": return .green
+        case "failed": return .red
+        case "in_progress": return palette.bodyText
+        default: return palette.bodyText.opacity(0.72)
+        }
     }
 }
 

@@ -284,20 +284,16 @@ struct ChatComposerChrome: View {
         .onChange(of: fieldFocused) { _, focused in
             if focused, !allowTextFieldFocus {
                 fieldFocused = false
-                ChatUIDebugLogger.inputFocusSuppressedBecauseImplicit()
                 return
             }
-            ChatUIDebugLogger.inputFocusChanged(focused)
         }
         .onChange(of: isSending) { _, sending in
             if sending {
                 allowTextFieldFocus = false
                 fieldFocused = false
-                ChatUIDebugLogger.composerLockChanged(locked: true, reason: "isSending")
             }
         }
         .onChange(of: awaitingAssistantReply) { _, awaiting in
-            ChatUIDebugLogger.composerLockChanged(locked: awaiting, reason: "awaitingAssistantReply")
             fieldFocused = false
             allowTextFieldFocus = false
             if !awaiting {

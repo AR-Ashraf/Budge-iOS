@@ -11,7 +11,6 @@
 		03D2DF085872699A467B488D /* BudgeChatPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD256CE39DADEFA825E5DB36 /* BudgeChatPalette.swift */; };
 		04974EF78DE1455E1D015B3F /* KnowFromPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87266EFA2A8579A4CE57E6BB /* KnowFromPlatformView.swift */; };
 		05D30A3F8AFB637BC090974F /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C971C2ED9FF7FE78D6159617 /* ChatService.swift */; };
-		0A6B356F4124B6CF1A58065D /* ChatUIDebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C66540E62F957C19679A92C /* ChatUIDebugLogger.swift */; };
 		0D8B7FFB50169EF24F698F27 /* JourneyCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9F23A125737F0D38A1FDA9 /* JourneyCompletionView.swift */; };
 		0F2E4DE45B27BAFEBB246A0D /* AuthMiddleware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65ADC93083624D4B33DF6342 /* AuthMiddleware.swift */; };
 		0F69569F65A7FD734DAF7A25 /* OnboardingGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6523658557514C270BB5 /* OnboardingGateView.swift */; };
@@ -176,7 +175,6 @@
 		9A564305142519114577B8AA /* ButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStyles.swift; sourceTree = "<group>"; };
 		9A7CE8CAD19464FFD137F299 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		9BA8540F7FEEE0A3BAFBA81B /* UserTypeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserTypeView.swift; sourceTree = "<group>"; };
-		9C66540E62F957C19679A92C /* ChatUIDebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatUIDebugLogger.swift; sourceTree = "<group>"; };
 		A465C963D797B7B5F4EBC386 /* OnboardingFinancialConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFinancialConstants.swift; sourceTree = "<group>"; };
 		A4857D0D13A11ADC3538B6C3 /* OnboardingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingService.swift; sourceTree = "<group>"; };
 		A6806CBEFDC79406AEA1B18B /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
@@ -290,7 +288,6 @@
 			isa = PBXGroup;
 			children = (
 				AE5C1C6F5B0E32E015DCECC9 /* ChatSuggestedPrompts.swift */,
-				9C66540E62F957C19679A92C /* ChatUIDebugLogger.swift */,
 				EC0C8365CB738F559ACC6318 /* ChatViewModel.swift */,
 				5884550E9D42D6BC48BCBE06 /* ReadAloudController.swift */,
 				C0C15F3129559BCC2B454620 /* Rendering */,
@@ -869,7 +866,6 @@
 				424461CFD9D4182661B76AC4 /* ChatScrollOffsetReader.swift in Sources */,
 				05D30A3F8AFB637BC090974F /* ChatService.swift in Sources */,
 				89CC4F9825E57281D59FB463 /* ChatSuggestedPrompts.swift in Sources */,
-				0A6B356F4124B6CF1A58065D /* ChatUIDebugLogger.swift in Sources */,
 				631A56ADCED702034354C6E7 /* ChatView.swift in Sources */,
 				1B2646BBAB2A1A0E51B9F4FF /* ChatViewModel.swift in Sources */,
 				F691B0A3D588F5F9161B9BE4 /* Color+Extensions.swift in Sources */,
