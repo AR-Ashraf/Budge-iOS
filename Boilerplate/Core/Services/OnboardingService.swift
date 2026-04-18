@@ -263,7 +263,9 @@ final class OnboardingService {
     // MARK: - Routing helpers
 
     /// Next major step from Firestore profile (no E2EE gates).
-    func nextMajorStep(from profile: [String: Any]) -> OnboardingMajorStep {
+    /// Pass `uid` so local completion (see `OnboardingFinancialProgress`) can override lagging Firestore `hasFinancialData`.
+    func nextMajorStep(from profile: [String: Any], uid: String) -> OnboardingMajorStep {
+        let profile = OnboardingFinancialProgress.mergedProfileIfLocalFinancialComplete(profile, uid: uid)
         if !hasStartingBalance(profile) { return .manageBalance }
         let userType = profile["userType"] as? String
         if userType == nil || userType?.isEmpty == true { return .budgeIntro }

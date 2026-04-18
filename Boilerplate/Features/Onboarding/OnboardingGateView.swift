@@ -80,7 +80,7 @@ struct OnboardingGateView: View {
 
     @ViewBuilder
     private func mainStep(uid: String) -> some View {
-        let step = onboarding.nextMajorStep(from: profile)
+        let step = onboarding.nextMajorStep(from: profile, uid: uid)
         switch step {
         case .manageBalance:
             ManageBalanceView(
@@ -175,6 +175,8 @@ struct OnboardingGateView: View {
                 onIncomeCompleted: {},
                 onExpenseCompleted: {
                     // After expense completion, go to journey completion (chat).
+                    // Persist locally so post-journey `loadProfile` does not route back into financial setup while Firestore catches up.
+                    OnboardingFinancialProgress.markLocalHasFinancialDataComplete(uid: uid)
                     OnboardingFinancialProgress.clear(uid: uid)
                     profile["hasFinancialData"] = true
                     showJourney = true
@@ -233,10 +235,11 @@ struct OnboardingGateView: View {
             }
         }
         do {
-            let data = try await onboarding.fetchUserProfile(uid: uid)
+            let raw = try await onboarding.fetchUserProfile(uid: uid)
+            let data = OnboardingFinancialProgress.mergedProfileIfLocalFinancialComplete(raw, uid: uid)
             await MainActor.run {
                 profile = data
-                if onboarding.nextMajorStep(from: data) == .financialSetup {
+                if onboarding.nextMajorStep(from: data, uid: uid) == .financialSetup {
                     financialSubStep = OnboardingFinancialProgress.load(uid: uid)
                 }
                 isLoading = false

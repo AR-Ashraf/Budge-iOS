@@ -27,4 +27,27 @@ enum OnboardingFinancialProgress {
     static func clear(uid: String) {
         UserDefaults.standard.removeObject(forKey: storageKey(uid: uid))
     }
+
+    // MARK: - Local completion (Firestore `hasFinancialData` can lag after expense save)
+
+    private static func localHasFinancialDataKey(uid: String) -> String {
+        "onboarding_local_has_financial_data_\(uid)"
+    }
+
+    /// Persisted when the user finishes income + expense so routing does not depend on Firestore alone.
+    static func markLocalHasFinancialDataComplete(uid: String) {
+        UserDefaults.standard.set(true, forKey: localHasFinancialDataKey(uid: uid))
+    }
+
+    static func hasLocalHasFinancialDataComplete(uid: String) -> Bool {
+        UserDefaults.standard.bool(forKey: localHasFinancialDataKey(uid: uid))
+    }
+
+    /// Merges `hasFinancialData: true` when this device has completed the financial setup flow.
+    static func mergedProfileIfLocalFinancialComplete(_ profile: [String: Any], uid: String) -> [String: Any] {
+        guard hasLocalHasFinancialDataComplete(uid: uid) else { return profile }
+        var merged = profile
+        merged["hasFinancialData"] = true
+        return merged
+    }
 }
