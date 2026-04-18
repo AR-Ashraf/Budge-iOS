@@ -7,6 +7,12 @@ final class ChatService {
 
     // MARK: - Types
 
+    struct ChatThread: Identifiable, Equatable {
+        let id: String
+        let title: String
+        let timestamp: Date?
+    }
+
     struct ChatMessage: Identifiable, Equatable {
         let id: String
         let role: String
@@ -54,6 +60,33 @@ final class ChatService {
 
     // MARK: - Messaging
 
+    func fetchChatThreads(uid: String) async throws -> [ChatThread] {
+        let q = db.collection("chats")
+            .document(uid)
+            .collection("userChats")
+            .order(by: "timestamp", descending: true)
+
+        let snap = try await q.getDocuments()
+        return snap.documents.map { doc in
+            let data = doc.data()
+            let title = String(data["title"] as? String ?? "Chat")
+            let ts = (data["timestamp"] as? Timestamp)?.dateValue()
+            return ChatThread(id: doc.documentID, title: title, timestamp: ts)
+        }
+    }
+
+    func updateChatTitle(uid: String, chatId: String, newTitle: String) async throws {
+        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        try await chatRef(uid: uid, chatId: chatId).setData(["title": trimmed], merge: true)
+    }
+
+    func deleteChat(uid: String, chatId: String) async throws {
+        try await chatRef(uid: uid, chatId: chatId).delete()
+    }
+
+    /// Seeds the chat doc before the first message. The **canonical title** is set server-side by the
+    /// `onChatUserMessageCreated` Cloud Function (DeepSeek), which overwrites this placeholder after the first user message.
     func ensureChatDocument(uid: String, chatId: String, seedTitleFrom text: String) async throws {
         let ref = chatRef(uid: uid, chatId: chatId)
         let snap = try await ref.getDocument()

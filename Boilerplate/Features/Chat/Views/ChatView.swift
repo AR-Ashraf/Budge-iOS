@@ -42,6 +42,7 @@ private struct ChatScreen: View {
 
     @State private var transcriber = SpeechTranscriber()
     @State private var readAloud = ReadAloudController()
+    @State private var showSidebar: Bool = false
     /// From `UIScrollView`: `maxContentOffsetY - contentOffset.y`; near 0 at bottom, larger when scrolled up.
     @State private var scrollDistanceFromBottom: CGFloat = 0
     /// Coalesces rapid `scrollTo` requests (send + Firestore updates) so the list does not animate up/down repeatedly.
@@ -127,119 +128,129 @@ private struct ChatScreen: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            VStack(spacing: 0) {
-                ChatChromeTopBar(
-                    currencyCode: model.headerCurrencyCode,
-                    balanceText: model.headerBalanceDisplay,
-                    onLogoTap: { model.beginNewChat() },
-                    onCurrencyTap: {
-                        Task { await model.refreshFinanceHeader() }
-                    },
-                    onMenuTap: { router.navigate(to: .settings) }
-                )
-                .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
+            ZStack {
+                VStack(spacing: 0) {
+                    ChatChromeTopBar(
+                        currencyCode: model.headerCurrencyCode,
+                        balanceText: model.headerBalanceDisplay,
+                        onLogoTap: { model.beginNewChat() },
+                        onCurrencyTap: {
+                            Task { await model.refreshFinanceHeader() }
+                        },
+                        onMenuTap: { showSidebar = true }
+                    )
+                    .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
 
-                ZStack(alignment: .bottomTrailing) {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 12) {
-                            // Anchor for scroll offset KVO (see ``ChatScrollOffsetReader``).
-                            Color.clear
-                                .frame(width: 1, height: 1)
-                                .background(
-                                    ChatScrollOffsetReader { distance in
-                                        scrollDistanceFromBottom = distance
-                                    }
-                                )
-
-                            // `VStack` (not `LazyVStack`) so agentic rows under the last user bubble keep stable Y positions
-                            // when Firestore appends steps; LazyVStack remeasured siblings and caused visible jumps.
+                    ZStack(alignment: .bottomTrailing) {
+                        ScrollView {
                             VStack(alignment: .leading, spacing: 12) {
-                                if isEmpty {
-                                    ChatWelcomeHero()
-                                        .frame(maxWidth: .infinity)
-                                        .transition(.opacity.combined(with: .move(edge: .top)))
-                                }
-
-                                let msgs = model.messages
-                                let lastUserIdx = Self.lastUserMessageIndex(in: msgs)
-
-                                ForEach(Array(msgs.enumerated()), id: \.element.id) { index, m in
-                                    let animateAssistantInsertion =
-                                        m.role == "assistant"
-                                        && m.id == msgs.last?.id
-                                        && msgs.count > (assistantAnimationBaselineCount ?? 0)
-                                    MessageRow(
-                                        message: m,
-                                        readAloud: readAloud,
-                                        animateAssistantInsertion: animateAssistantInsertion
-                                    )
-                                    .id(m.id)
-
-                                    if index == lastUserIdx {
-                                        ChatTurnInterstitialView(
-                                            approval: model.approvalState,
-                                            agenticSteps: effectiveAgenticSteps(for: model),
-                                            lastMessageRole: msgs.last?.role,
-                                            onAllow: { choice in Task { await model.approve(choice: choice) } },
-                                            onDeny: { Task { await model.deny() } },
-                                            onDismissKeyboard: dismissChatKeyboard
-                                        )
-                                        .id("interstitial-after-\(m.id)")
-                                        .transaction { $0.animation = nil }
-                                    }
-                                }
-
+                                // Anchor for scroll offset KVO (see ``ChatScrollOffsetReader``).
                                 Color.clear
-                                    .frame(height: 1)
-                                    .id("bottom")
+                                    .frame(width: 1, height: 1)
+                                    .background(
+                                        ChatScrollOffsetReader { distance in
+                                            scrollDistanceFromBottom = distance
+                                        }
+                                    )
+
+                                // `VStack` (not `LazyVStack`) so agentic rows under the last user bubble keep stable Y positions
+                                // when Firestore appends steps; LazyVStack remeasured siblings and caused visible jumps.
+                                VStack(alignment: .leading, spacing: 12) {
+                                    if isEmpty {
+                                        ChatWelcomeHero()
+                                            .frame(maxWidth: .infinity)
+                                            .transition(.opacity.combined(with: .move(edge: .top)))
+                                    }
+
+                                    let msgs = model.messages
+                                    let lastUserIdx = Self.lastUserMessageIndex(in: msgs)
+
+                                    ForEach(Array(msgs.enumerated()), id: \.element.id) { index, m in
+                                        let animateAssistantInsertion =
+                                            m.role == "assistant"
+                                            && m.id == msgs.last?.id
+                                            && msgs.count > (assistantAnimationBaselineCount ?? 0)
+                                        MessageRow(
+                                            message: m,
+                                            readAloud: readAloud,
+                                            animateAssistantInsertion: animateAssistantInsertion
+                                        )
+                                        .id(m.id)
+
+                                        if index == lastUserIdx {
+                                            ChatTurnInterstitialView(
+                                                approval: model.approvalState,
+                                                agenticSteps: effectiveAgenticSteps(for: model),
+                                                lastMessageRole: msgs.last?.role,
+                                                onAllow: { choice in Task { await model.approve(choice: choice) } },
+                                                onDeny: { Task { await model.deny() } },
+                                                onDismissKeyboard: dismissChatKeyboard
+                                            )
+                                            .id("interstitial-after-\(m.id)")
+                                            .transaction { $0.animation = nil }
+                                        }
+                                    }
+
+                                    Color.clear
+                                        .frame(height: 1)
+                                        .id("bottom")
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                        }
+                        .scrollDismissesKeyboard(.immediately)
+                        .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
+
+                        ChatScrollDownFab(visible: showScrollFab) {
+                            withAnimation(.easeOut(duration: 0.28)) {
+                                proxy.scrollTo("bottom", anchor: .bottom)
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .padding(.trailing, 12)
+                        .padding(.bottom, 8)
                     }
-                    .scrollDismissesKeyboard(.immediately)
-                    .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
 
-                    ChatScrollDownFab(visible: showScrollFab) {
-                        withAnimation(.easeOut(duration: 0.28)) {
-                            proxy.scrollTo("bottom", anchor: .bottom)
+                    if isEmpty {
+                        StarterPromptStrip { picked in
+                            model.messageDraft = picked
+                        }
+                        .padding(.horizontal, 12)
+                        .transition(.opacity)
+                        .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
+                    }
+
+                    ChatComposerChrome(
+                        text: $model.messageDraft,
+                        isSending: model.isSending,
+                        awaitingAssistantReply: model.awaitingAssistantReply,
+                        onSend: {
+                            Task {
+                                await transcriber.stopRecording()
+                                await model.send()
+                            }
+                        },
+                        transcriber: transcriber
+                    )
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(palette.screenBackground)
+                    .onChange(of: transcriber.transcript) { _, newValue in
+                        if case .recording = transcriber.state {
+                            model.messageDraft = newValue
                         }
                     }
-                    .padding(.trailing, 12)
-                    .padding(.bottom, 8)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(palette.screenBackground.ignoresSafeArea())
 
-                if isEmpty {
-                    StarterPromptStrip { picked in
-                        model.messageDraft = picked
-                    }
-                    .padding(.horizontal, 12)
-                    .transition(.opacity)
-                    .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
-                }
-
-                ChatComposerChrome(
-                    text: $model.messageDraft,
-                    isSending: model.isSending,
-                    awaitingAssistantReply: model.awaitingAssistantReply,
-                    onSend: {
-                        Task {
-                            await transcriber.stopRecording()
-                            await model.send()
-                        }
-                    },
-                    transcriber: transcriber
+                ChatSidebarDrawer(
+                    visible: $showSidebar,
+                    model: model,
+                    onDismissKeyboard: dismissChatKeyboard
                 )
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(palette.screenBackground)
-                .onChange(of: transcriber.transcript) { _, newValue in
-                    if case .recording = transcriber.state {
-                        model.messageDraft = newValue
-                    }
-                }
+                .ignoresSafeArea()
             }
-            .background(palette.screenBackground.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
             .animation(.easeInOut(duration: 0.35), value: isEmpty)
             .onAppear {

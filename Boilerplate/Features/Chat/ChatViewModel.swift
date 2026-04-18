@@ -9,7 +9,7 @@ final class ChatViewModel {
 
     private let chatService: ChatService
     private let onboarding: OnboardingService
-    private let uid: String
+    let uid: String
 
     /// Matches web: new UUID when user starts a fresh thread from the header logo.
     private(set) var chatId: String
@@ -18,6 +18,8 @@ final class ChatViewModel {
     var approvalState: ChatService.ApprovalState?
     var messageDraft: String = ""
     var isSending: Bool = false
+    var chatThreads: [ChatService.ChatThread] = []
+    var chatThreadsLoading: Bool = false
 
     /// After a successful user send, `true` until Firestore shows an assistant message as the latest message (clears keyboard lock / composer disable).
     private(set) var awaitingAssistantReply: Bool = false
@@ -64,10 +66,27 @@ final class ChatViewModel {
             }
         }
 
+        Task { await refreshChatThreads() }
+
         financeHeaderTask?.cancel()
         financeHeaderTask = Task { [weak self] in
             await self?.refreshFinanceHeader()
         }
+    }
+
+    func openChat(chatId: String) {
+        guard self.chatId != chatId else { return }
+        messagesListener?.remove()
+        approvalListener?.remove()
+        messagesListener = nil
+        approvalListener = nil
+
+        self.chatId = chatId
+        messages = []
+        messageDraft = ""
+        approvalState = nil
+        awaitingAssistantReply = false
+        start()
     }
 
     /// New chat thread (web: new `chatId` + empty list).
@@ -84,6 +103,37 @@ final class ChatViewModel {
         awaitingAssistantReply = false
         start()
         Task { await refreshFinanceHeader() }
+    }
+
+    @MainActor
+    func refreshChatThreads() async {
+        guard !chatThreadsLoading else { return }
+        chatThreadsLoading = true
+        defer { chatThreadsLoading = false }
+        do {
+            chatThreads = try await chatService.fetchChatThreads(uid: uid)
+        } catch {
+            chatThreads = []
+        }
+    }
+
+    @MainActor
+    func renameChatThread(chatId: String, newTitle: String) async {
+        do {
+            try await chatService.updateChatTitle(uid: uid, chatId: chatId, newTitle: newTitle)
+        } catch {}
+        await refreshChatThreads()
+    }
+
+    @MainActor
+    func deleteChatThread(chatId: String) async {
+        do {
+            try await chatService.deleteChat(uid: uid, chatId: chatId)
+        } catch {}
+        if self.chatId == chatId {
+            beginNewChat()
+        }
+        await refreshChatThreads()
     }
 
     @MainActor
@@ -123,6 +173,7 @@ final class ChatViewModel {
         defer { isSending = false }
         do {
             try await chatService.sendUserMessage(uid: uid, chatId: chatId, text: text)
+            await refreshChatThreads()
             await refreshFinanceHeader()
         } catch {
             messageDraft = text
