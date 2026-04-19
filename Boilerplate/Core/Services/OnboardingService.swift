@@ -187,6 +187,9 @@ final class OnboardingService {
     struct FinanceAccountSnapshot: Identifiable {
         let id: String
         let name: String?
+        let type: String?
+        let currency: String?
+        let isActive: Bool
         let startingBalance: Double?
         let currentBalance: Double?
     }
@@ -212,6 +215,9 @@ final class OnboardingService {
                 FinanceAccountSnapshot(
                     id: item["id"] as? String ?? UUID().uuidString,
                     name: item["name"] as? String,
+                    type: item["type"] as? String,
+                    currency: item["currency"] as? String,
+                    isActive: (item["isActive"] as? Bool) ?? true,
                     startingBalance: Self.doubleFromJSONValue(item["startingBalance"]),
                     currentBalance: Self.doubleFromJSONValue(item["currentBalance"])
                 )
@@ -258,6 +264,170 @@ final class OnboardingService {
             let callable = functions.httpsCallable("finance_migrateCurrentUserData")
             _ = try await callable.call()
         }
+    }
+
+    // MARK: - Chart / Balance Sheet (KMS callables)
+
+    struct BudgetYearPayload {
+        let year: String
+        let income: [[String: Any]]
+        let expense: [[String: Any]]
+    }
+
+    struct YearlyReportPayload {
+        let year: String
+        let income: [[String: Any]]
+        let expense: [[String: Any]]
+    }
+
+    struct TransactionCursor: Equatable {
+        let postingTime: String
+        let id: String
+    }
+
+    struct TransactionPagePayload {
+        let transactions: [[String: Any]]
+        let hasMore: Bool
+        let nextCursor: TransactionCursor?
+    }
+
+    func fetchBudgetYearDecrypted(year: String) async throws -> BudgetYearPayload {
+        try await financeCalls.run { [functions] in
+            let callable = functions.httpsCallable("finance_listBudgetYearDecrypted")
+            let result = try await callable.call(["year": year])
+            guard let payload = result.data as? [String: Any] else {
+                throw NSError(domain: "OnboardingService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Invalid budget year response"])
+            }
+            return BudgetYearPayload(
+                year: payload["year"] as? String ?? year,
+                income: payload["income"] as? [[String: Any]] ?? [],
+                expense: payload["expense"] as? [[String: Any]] ?? []
+            )
+        }
+    }
+
+    func fetchYearlyReportDecrypted(year: String) async throws -> YearlyReportPayload {
+        try await financeCalls.run { [functions] in
+            let callable = functions.httpsCallable("finance_listYearlyReportDecrypted")
+            let result = try await callable.call(["year": year])
+            guard let payload = result.data as? [String: Any] else {
+                throw NSError(domain: "OnboardingService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Invalid yearly report response"])
+            }
+            return YearlyReportPayload(
+                year: payload["year"] as? String ?? year,
+                income: payload["income"] as? [[String: Any]] ?? [],
+                expense: payload["expense"] as? [[String: Any]] ?? []
+            )
+        }
+    }
+
+    func fetchTransactionsPage(limit: Int = 25, cursor: TransactionCursor?) async throws -> TransactionPagePayload {
+        try await financeCalls.run { [functions] in
+            var payload: [String: Any] = ["limit": limit]
+            if let cursor {
+                payload["startAfterPostingTime"] = cursor.postingTime
+                payload["startAfterId"] = cursor.id
+            }
+            let callable = functions.httpsCallable("finance_listTransactionsDecrypted")
+            let result = try await callable.call(payload)
+            guard let data = result.data as? [String: Any] else {
+                throw NSError(domain: "OnboardingService", code: 4, userInfo: [NSLocalizedDescriptionKey: "Invalid transactions response"])
+            }
+            let txs = data["transactions"] as? [[String: Any]] ?? []
+            let hasMore = data["hasMore"] as? Bool ?? false
+            var next: TransactionCursor?
+            if let nc = data["nextCursor"] as? [String: Any],
+               let pt = nc["postingTime"] as? String,
+               let id = nc["id"] as? String
+            {
+                next = TransactionCursor(postingTime: pt, id: id)
+            }
+            return TransactionPagePayload(transactions: txs, hasMore: hasMore, nextCursor: next)
+        }
+    }
+
+    func financeCreateBudgetCategory(type: String, name: String, amountForCurrentMonth: Double?, year: String?) async throws -> String {
+        try await financeCalls.run { [functions] in
+            var payload: [String: Any] = ["type": type, "name": name]
+            if let amountForCurrentMonth {
+                payload["amountForCurrentMonth"] = NSNumber(value: amountForCurrentMonth)
+            }
+            if let year {
+                payload["year"] = year
+            }
+            let callable = functions.httpsCallable("finance_createBudgetCategory")
+            let result = try await callable.call(payload)
+            guard let data = result.data as? [String: Any], let key = data["key"] as? String else {
+                throw NSError(domain: "OnboardingService", code: 5, userInfo: [NSLocalizedDescriptionKey: "createBudgetCategory failed"])
+            }
+            return key
+        }
+    }
+
+    func financeDeleteBudgetCategory(type: String, key: String) async throws {
+        try await financeCalls.run { [functions] in
+            let callable = functions.httpsCallable("finance_deleteBudgetCategory")
+            _ = try await callable.call(["type": type, "key": key])
+        }
+    }
+
+    func financeSetBudgetAggregate(type: String, year: String, key: String, monthKey: String, amount: Double) async throws {
+        try await financeCalls.run { [functions] in
+            let callable = functions.httpsCallable("finance_setBudgetAggregate")
+            _ = try await callable.call([
+                "type": type,
+                "year": year,
+                "key": key,
+                "monthKey": monthKey,
+                "amount": amount,
+            ] as [String: Any])
+        }
+    }
+
+    func financeCreateTransaction(accountId: String, category: String, key: String, amount: Double, note: String?, postingTime: String) async throws -> String {
+        try await financeCalls.run { [functions] in
+            var payload: [String: Any] = [
+                "accountId": accountId,
+                "category": category,
+                "key": key,
+                "amount": NSNumber(value: amount),
+                "postingTime": postingTime,
+            ]
+            if let note, !note.isEmpty { payload["note"] = note }
+            let callable = functions.httpsCallable("finance_createTransaction")
+            let result = try await callable.call(payload)
+            guard let data = result.data as? [String: Any], let txId = data["txId"] as? String else {
+                throw NSError(domain: "OnboardingService", code: 6, userInfo: [NSLocalizedDescriptionKey: "createTransaction failed"])
+            }
+            return txId
+        }
+    }
+
+    func financeUpdateTransaction(txId: String, patch: [String: Any]) async throws {
+        try await financeCalls.run { [functions] in
+            let callable = functions.httpsCallable("finance_updateTransaction")
+            _ = try await callable.call(["txId": txId, "patch": patch])
+        }
+    }
+
+    func financeDeleteTransaction(txId: String) async throws {
+        try await financeCalls.run { [functions] in
+            let callable = functions.httpsCallable("finance_deleteTransaction")
+            _ = try await callable.call(["txId": txId])
+        }
+    }
+
+    /// Updates display `name` for `financialTypes/{uid}/{type}/{key}` (web parity with `updateFinancialTypes`).
+    func updateFinancialCategoryDisplayName(uid: String, type: String, key: String, name: String) async throws {
+        let ref = db.collection("financialTypes").document(uid).collection(type).document(key)
+        try await ref.setData(["name": name], merge: true)
+    }
+
+    /// Financial category rows for pickers (`financialTypes/{uid}/income|expense`).
+    func fetchFinancialTypeRows(uid: String) async throws -> (income: [[String: Any]], expense: [[String: Any]]) {
+        let inc = try await db.collection("financialTypes").document(uid).collection("income").getDocuments()
+        let exp = try await db.collection("financialTypes").document(uid).collection("expense").getDocuments()
+        return (inc.documents.map { $0.data() }, exp.documents.map { $0.data() })
     }
 
     // MARK: - Routing helpers

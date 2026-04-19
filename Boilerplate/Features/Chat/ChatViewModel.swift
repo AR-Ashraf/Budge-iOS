@@ -28,6 +28,8 @@ final class ChatViewModel {
 
     var headerCurrencyCode: String = "USD"
     var headerBalanceDisplay: String = "0"
+    /// True while loading profile + `finance_getSnapshot` for user-level balances.
+    var headerBalanceLoading: Bool = false
 
     @ObservationIgnored private var financeHeaderTask: Task<Void, Never>?
 
@@ -69,6 +71,7 @@ final class ChatViewModel {
         Task { await refreshChatThreads() }
 
         financeHeaderTask?.cancel()
+        headerBalanceLoading = true
         financeHeaderTask = Task { [weak self] in
             await self?.refreshFinanceHeader()
         }
@@ -138,14 +141,25 @@ final class ChatViewModel {
 
     @MainActor
     func refreshFinanceHeader() async {
+        headerBalanceLoading = true
+        defer { headerBalanceLoading = false }
         do {
-            let profile = try await onboarding.fetchUserProfile(uid: uid)
-            if let c = profile["currency"] as? String, !c.isEmpty {
+            async let profileTask = onboarding.fetchUserProfile(uid: uid)
+            async let snapTask = onboarding.fetchFinanceSnapshot()
+            let profile = try await profileTask
+            let snap = try await snapTask
+
+            // Icon / label: `users/{uid}.currency` (kept in sync with main account currency on the server / web).
+            if let c = profile["currency"] as? String,
+               !c.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            {
                 headerCurrencyCode = c.uppercased()
+            } else {
+                headerCurrencyCode = "USD"
             }
-            let snap = try await onboarding.fetchFinanceSnapshot()
-            let fromAccounts = snap.accounts.reduce(0.0) { $0 + ($1.currentBalance ?? 0) }
-            let total = snap.currentBalance ?? fromAccounts
+
+            // Amount: `users/{uid}.currentBalance` — server sum of all account balances in user currency (see `finance_getSnapshot` + triggers).
+            let total = snap.currentBalance ?? 0
             headerBalanceDisplay = Self.formatGroupedNumber(total)
         } catch {
             headerBalanceDisplay = "0"

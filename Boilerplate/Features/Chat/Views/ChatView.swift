@@ -38,11 +38,14 @@ struct ChatView: View {
 private struct ChatScreen: View {
     @Bindable var model: ChatViewModel
     @Environment(Router.self) private var router
+    @Environment(OnboardingService.self) private var onboarding
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var transcriber = SpeechTranscriber()
     @State private var readAloud = ReadAloudController()
     @State private var showSidebar: Bool = false
+    @State private var showChartSheet: Bool = false
+    @State private var chartViewModel: ChartViewModel?
     /// From `UIScrollView`: `maxContentOffsetY - contentOffset.y`; near 0 at bottom, larger when scrolled up.
     @State private var scrollDistanceFromBottom: CGFloat = 0
     /// Coalesces rapid `scrollTo` requests (send + Firestore updates) so the list does not animate up/down repeatedly.
@@ -151,9 +154,11 @@ private struct ChatScreen: View {
                     ChatChromeTopBar(
                         currencyCode: model.headerCurrencyCode,
                         balanceText: model.headerBalanceDisplay,
+                        isBalanceLoading: model.headerBalanceLoading,
                         onLogoTap: { model.beginNewChat() },
                         onCurrencyTap: {
-                            Task { await model.refreshFinanceHeader() }
+                            chartViewModel = ChartViewModel(uid: model.uid, onboarding: onboarding)
+                            showChartSheet = true
                         },
                         onMenuTap: { showSidebar = true }
                     )
@@ -265,11 +270,28 @@ private struct ChatScreen: View {
                 ChatSidebarDrawer(
                     visible: $showSidebar,
                     model: model,
-                    onDismissKeyboard: dismissChatKeyboard
+                    onDismissKeyboard: dismissChatKeyboard,
+                    onBalanceSheet: {
+                        chartViewModel = ChartViewModel(uid: model.uid, onboarding: onboarding)
+                        showChartSheet = true
+                    }
                 )
                 .ignoresSafeArea()
             }
             .toolbar(.hidden, for: .navigationBar)
+            .fullScreenCover(isPresented: $showChartSheet) {
+                Group {
+                    if let chartViewModel {
+                        ChartSheetView(model: chartViewModel)
+                    }
+                }
+            }
+            .onChange(of: showChartSheet) { _, open in
+                if !open {
+                    chartViewModel = nil
+                    Task { await model.refreshFinanceHeader() }
+                }
+            }
             .animation(.easeInOut(duration: 0.35), value: isEmpty)
             .onAppear {
                 if assistantAnimationBaselineCount == nil, !model.messages.isEmpty {

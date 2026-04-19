@@ -6,6 +6,8 @@ import UIKit
 struct ChatChromeTopBar: View {
     let currencyCode: String
     let balanceText: String
+    /// True while finance snapshot / FX conversion is in flight (show spinner in pill).
+    var isBalanceLoading: Bool = false
     let onLogoTap: () -> Void
     let onCurrencyTap: () -> Void
     let onMenuTap: () -> Void
@@ -30,9 +32,18 @@ struct ChatChromeTopBar: View {
                 HStack(spacing: 6) {
                     currencyGlyph(for: currencyCode)
                         .foregroundStyle(palette.currencyPillAccent)
-                    Text(balanceText)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(palette.currencyPillAccent)
+                    if isBalanceLoading {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .controlSize(.small)
+                            .tint(palette.currencyPillAccent)
+                            // Match ``currencyGlyph`` image frame (18×18).
+                            .frame(width: 18, height: 18)
+                    } else {
+                        Text(balanceText)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(palette.currencyPillAccent)
+                    }
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
@@ -44,7 +55,7 @@ struct ChatChromeTopBar: View {
                 )
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Total balance \(balanceText) \(currencyCode)")
+            .accessibilityLabel(isBalanceLoading ? "Loading total balance" : "Total balance \(balanceText) \(currencyCode), open balance sheet")
 
             Button(action: onMenuTap) {
                 Image(systemName: "line.3.horizontal")

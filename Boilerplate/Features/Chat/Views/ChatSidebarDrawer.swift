@@ -70,6 +70,8 @@ struct ChatSidebarDrawer: View {
     @Binding var visible: Bool
     @Bindable var model: ChatViewModel
     let onDismissKeyboard: () -> Void
+    /// Opens the Balance Sheet (chart) — React `/chart` parity.
+    var onBalanceSheet: () -> Void = {}
 
     @Environment(AuthService.self) private var authService
     @Environment(ThemeController.self) private var themeController
@@ -79,8 +81,8 @@ struct ChatSidebarDrawer: View {
     @State private var pendingRenameThread: ChatService.ChatThread?
     @State private var renameValue: String = ""
     @State private var pendingDeleteThread: ChatService.ChatThread?
-    @State private var showComingSoon: Bool = false
     @State private var showProfileSheet: Bool = false
+    @State private var showProfileComingSoon: Bool = false
     @State private var presented: Bool = false
     @State private var drawerOffsetX: CGFloat = 0
 
@@ -140,11 +142,6 @@ struct ChatSidebarDrawer: View {
                     Task { await commitDelete() }
                 }
                 Button("Cancel", role: .cancel) { pendingDeleteThread = nil }
-            }
-            .alert("Coming soon", isPresented: $showComingSoon) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Balance Sheet will be available here soon.")
             }
         }
     }
@@ -257,7 +254,8 @@ struct ChatSidebarDrawer: View {
 
     private var balanceSheetRow: some View {
         Button {
-            showComingSoon = true
+            onBalanceSheet()
+            dismiss()
         } label: {
             HStack(spacing: 10) {
                 Image("excelIcon")
@@ -414,12 +412,17 @@ struct ChatSidebarDrawer: View {
                     }
                 },
                 onOpenReminders: {
-                    showComingSoon = true
+                    showProfileComingSoon = true
                 },
                 onOpenAccounts: {
-                    showComingSoon = true
+                    showProfileComingSoon = true
                 }
             )
+        }
+        .alert("Coming soon", isPresented: $showProfileComingSoon) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("This feature will be available in a future update.")
         }
     }
 
