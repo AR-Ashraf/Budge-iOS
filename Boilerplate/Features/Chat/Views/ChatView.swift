@@ -234,6 +234,20 @@ private struct ChatScreen: View {
                         .padding(.bottom, 8)
                     }
 
+                    // Apple-style approval focus: blur + centered confirmation.
+                    .overlay {
+                        if model.approvalState?.awaitingApproval == true,
+                           let approval = model.approvalState,
+                           approval.pendingApprovals.indices.contains(approval.currentApprovalIndex)
+                        {
+                            ChatApprovalModal(
+                                approval: approval.pendingApprovals[approval.currentApprovalIndex],
+                                onAllow: { choice in Task { await model.approve(choice: choice) } },
+                                onDeny: { Task { await model.deny() } }
+                            )
+                        }
+                    }
+
                     if isEmpty {
                         StarterPromptStrip { picked in
                             model.messageDraft = picked
@@ -245,6 +259,7 @@ private struct ChatScreen: View {
 
                     ChatComposerChrome(
                         text: $model.messageDraft,
+                        mode: $model.chatMode,
                         isSending: model.isSending,
                         awaitingAssistantReply: model.awaitingAssistantReply,
                         onSend: {
@@ -377,13 +392,6 @@ private struct ChatTurnInterstitialView: View {
         Group {
             if showApproval || showAgentic {
                 VStack(alignment: .leading, spacing: 12) {
-                    if showApproval {
-                        ApprovalCard(
-                            approval: currentApprovalItem,
-                            onAllow: onAllow,
-                            onDeny: onDeny
-                        )
-                    }
                     if showAgentic, let steps = agenticSteps {
                         AgenticProgressView(steps: steps)
                             .padding(40)
@@ -394,6 +402,89 @@ private struct ChatTurnInterstitialView: View {
                 .simultaneousGesture(TapGesture().onEnded { onDismissKeyboard() })
             }
         }
+    }
+}
+
+// MARK: - Approval modal (Apple-style focus + blur)
+
+private struct ChatApprovalModal: View {
+    let approval: ChatService.ApprovalItem?
+    let onAllow: (_ choice: String?) -> Void
+    let onDeny: () -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let palette = BudgeChatPalette(colorScheme: colorScheme)
+        ZStack {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .ignoresSafeArea()
+
+            // Subtle dim to increase contrast and focus.
+            Color.black
+                .opacity(colorScheme == .dark ? 0.35 : 0.18)
+                .ignoresSafeArea()
+
+            VStack(spacing: 14) {
+                Text(approval?.message ?? "Proceed with the requested changes?")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(palette.bodyText)
+                    .multilineTextAlignment(.center)
+
+                HStack(spacing: 12) {
+                    Button("Deny") { onDeny() }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(palette.bodyText.opacity(0.78))
+
+                    Spacer(minLength: 0)
+
+                    if approval?.needsTypeSelection == true {
+                        BudgeApprovalPrimaryButton(title: "Expense") { onAllow("expense") }
+                        BudgeApprovalPrimaryButton(title: "Income") { onAllow("income") }
+                    } else {
+                        BudgeApprovalPrimaryButton(title: "Allow") { onAllow(nil) }
+                    }
+                }
+            }
+            .padding(18)
+            .frame(maxWidth: 420)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(palette.cardSurface.opacity(colorScheme == .dark ? 0.92 : 0.98))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(palette.borderPrimary.opacity(0.55), lineWidth: 1)
+            )
+            .padding(.horizontal, 24)
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.35 : 0.18), radius: 16, x: 0, y: 10)
+        }
+        .transition(.opacity)
+    }
+}
+
+private struct BudgeApprovalPrimaryButton: View {
+    let title: String
+    let action: () -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let palette = BudgeChatPalette(colorScheme: colorScheme)
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(palette.brandGreenDarkText)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(palette.brandGreenPrimary)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 

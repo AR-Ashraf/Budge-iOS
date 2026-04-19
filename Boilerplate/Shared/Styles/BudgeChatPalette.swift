@@ -88,4 +88,31 @@ struct BudgeChatPalette {
 
     /// Default borders for inputs and selection controls.
     var authBorder: Color { borderPrimary }
+
+    // MARK: - Chat mode chip (Ask / Agent / Plan)
+
+    /// Background tint for the composer mode chip. Subtle, Cursor-like.
+    func modeChipBackground(_ mode: ChatMode) -> Color {
+        switch mode {
+        case .ask:
+            return colorScheme == .dark ? Color(hex: "#2A2F36") : Color(hex: "#E5E7EB")
+        case .agent:
+            return colorScheme == .dark ? Color(hex: "#3B2E5E") : Color(hex: "#EDE9FE")
+        case .plan:
+            return colorScheme == .dark ? Color(hex: "#0F3A2E") : Color(hex: "#D1FAE5")
+        }
+    }
+
+    /// Foreground (icon + text) color for the composer mode chip, high contrast
+    /// against ``modeChipBackground(_:)`` in both light and dark themes.
+    func modeChipForeground(_ mode: ChatMode) -> Color {
+        switch mode {
+        case .ask:
+            return colorScheme == .dark ? Color(hex: "#F5FFF6") : Color(hex: "#1F2937")
+        case .agent:
+            return colorScheme == .dark ? Color(hex: "#E9D5FF") : Color(hex: "#5B21B6")
+        case .plan:
+            return colorScheme == .dark ? Color(hex: "#A7F3D0") : Color(hex: "#065F46")
+        }
+    }
 }

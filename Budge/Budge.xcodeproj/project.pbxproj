@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		003BF477C5612936D12FB5E8 /* ChatMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A81200EAFD621110FEDE05A /* ChatMode.swift */; };
 		00E9F6E8EC11D84FF05763B9 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE4EAF8A778FBE59BC72B354 /* PrimaryButton.swift */; };
 		03D2DF085872699A467B488D /* BudgeChatPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD256CE39DADEFA825E5DB36 /* BudgeChatPalette.swift */; };
 		04974EF78DE1455E1D015B3F /* KnowFromPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87266EFA2A8579A4CE57E6BB /* KnowFromPlatformView.swift */; };
@@ -88,6 +89,7 @@
 		A4D60E14D38BFC0BFBF01B5D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 54214337E06E7EE72CAFC5D0 /* GoogleSignIn */; };
 		A536C4A8D642AB20E7BC0E1C /* WhyUseBudgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E0147AD2753EE915EF6D66 /* WhyUseBudgeView.swift */; };
 		A5736C337CA7C79145E95BC7 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AEFBE04879EE16BDF15BFE4 /* APIClient.swift */; };
+		A5B63E20F5A88BB8F433830C /* ChatModePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB0B1B5C8C54E065436751A6 /* ChatModePicker.swift */; };
 		A9BC79C0FBD9CD01C9BF2FEC /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADFFC455BD0A0E443CD776BD /* ForgotPasswordView.swift */; };
 		B0011905171E4C0D602FAFAA /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F59F70D9658FC66856A3A6B7 /* AuthService.swift */; };
 		B0856C3BDF709546F1D81547 /* ChartViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39C73EB88D446C6C7A4C8C73 /* ChartViewModel.swift */; };
@@ -136,6 +138,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0A81200EAFD621110FEDE05A /* ChatMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMode.swift; sourceTree = "<group>"; };
 		0C51AB5034C429BBEF65C2A2 /* SpeechTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechTranscriber.swift; sourceTree = "<group>"; };
 		0F75C3A7B2405F7CC2F9E207 /* ProfilePhotoCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoCache.swift; sourceTree = "<group>"; };
 		112FF44A24426FC67AD06258 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
@@ -221,6 +224,7 @@
 		C971C2ED9FF7FE78D6159617 /* ChatService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatService.swift; sourceTree = "<group>"; };
 		CB3881D1FC78004A4964E3BD /* FinancialCategoryFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialCategoryFlowView.swift; sourceTree = "<group>"; };
 		D82629D6E7957993D2C0FA68 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		DB0B1B5C8C54E065436751A6 /* ChatModePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModePicker.swift; sourceTree = "<group>"; };
 		DCBDAF8373E6B1060751C56F /* FirebaseAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseAppDelegate.swift; sourceTree = "<group>"; };
 		DD256CE39DADEFA825E5DB36 /* BudgeChatPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgeChatPalette.swift; sourceTree = "<group>"; };
 		DE4EAF8A778FBE59BC72B354 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
@@ -333,6 +337,7 @@
 				AE5C1C6F5B0E32E015DCECC9 /* ChatSuggestedPrompts.swift */,
 				EC0C8365CB738F559ACC6318 /* ChatViewModel.swift */,
 				5884550E9D42D6BC48BCBE06 /* ReadAloudController.swift */,
+				48257EDD81BAF912E5387F86 /* Models */,
 				C0C15F3129559BCC2B454620 /* Rendering */,
 				892C5B1FBDC9F57D3BE2AC61 /* Speech */,
 				AC7141713723604D2EABD8FF /* Views */,
@@ -422,6 +427,14 @@
 				B3DC3296D452B9B523B401F6 /* BudgeTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		48257EDD81BAF912E5387F86 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				0A81200EAFD621110FEDE05A /* ChatMode.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		4AA683808C1817BAE321F2B3 /* ViewModels */ = {
@@ -688,6 +701,7 @@
 		AC7141713723604D2EABD8FF /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				DB0B1B5C8C54E065436751A6 /* ChatModePicker.swift */,
 				674E6F41F32393717CC28C53 /* ChatParityViews.swift */,
 				6B0042372827597335224C93 /* ChatScrollOffsetReader.swift */,
 				2510C7B96A895D0A135A7292 /* ChatSidebarDrawer.swift */,
@@ -958,6 +972,8 @@
 				76B8F4FC4C82345C14D56290 /* ChartSheetView.swift in Sources */,
 				B0856C3BDF709546F1D81547 /* ChartViewModel.swift in Sources */,
 				72B791DE3C6BEABD87C31FB9 /* ChatContentParser.swift in Sources */,
+				003BF477C5612936D12FB5E8 /* ChatMode.swift in Sources */,
+				A5B63E20F5A88BB8F433830C /* ChatModePicker.swift in Sources */,
 				9605FF1F2458238D027EBD04 /* ChatParityViews.swift in Sources */,
 				424461CFD9D4182661B76AC4 /* ChatScrollOffsetReader.swift in Sources */,
 				05D30A3F8AFB637BC090974F /* ChatService.swift in Sources */,

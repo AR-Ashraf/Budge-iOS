@@ -21,6 +21,10 @@ final class ChatViewModel {
     var chatThreads: [ChatService.ChatThread] = []
     var chatThreadsLoading: Bool = false
 
+    /// Per-send chat mode (default `.ask`). Each user message is stamped with the active mode at send time
+    /// so the Firebase Functions pipeline can route Ask / Agent / Plan strategies independently.
+    var chatMode: ChatMode = .ask
+
     /// After a successful user send, `true` until Firestore shows an assistant message as the latest message (clears keyboard lock / composer disable).
     private(set) var awaitingAssistantReply: Bool = false
 
@@ -66,6 +70,16 @@ final class ChatViewModel {
             approvalListener = chatService.subscribeApprovalState(uid: uid, chatId: chatId) { [weak self] state in
                 Task { @MainActor in
                     self?.approvalState = state
+
+                    #if DEBUG
+                    guard let state else { return }
+                    if let pending = state.pendingClassifiedJson, !pending.isEmpty {
+                        print("🧠 [BudgeChat] pendingClassified\n\(pending)")
+                    }
+                    if let debug = state.serverDebugJson, !debug.isEmpty {
+                        print("☁️ [BudgeChat] serverDebug\n\(debug)")
+                    }
+                    #endif
                 }
             }
         }
@@ -90,6 +104,7 @@ final class ChatViewModel {
         messageDraft = ""
         approvalState = nil
         awaitingAssistantReply = false
+        chatMode = .ask
         start()
     }
 
@@ -105,6 +120,7 @@ final class ChatViewModel {
         messageDraft = ""
         approvalState = nil
         awaitingAssistantReply = false
+        chatMode = .ask
         start()
     }
 
@@ -194,7 +210,7 @@ final class ChatViewModel {
         awaitingAssistantReply = true
         defer { isSending = false }
         do {
-            try await chatService.sendUserMessage(uid: uid, chatId: chatId, text: text)
+            try await chatService.sendUserMessage(uid: uid, chatId: chatId, text: text, mode: chatMode.rawValue)
             await refreshChatThreads()
             await refreshFinanceHeader()
         } catch {

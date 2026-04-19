@@ -479,6 +479,7 @@ private struct ChatExpandedComposerSheet: View {
 
 struct ChatComposerChrome: View {
     @Binding var text: String
+    @Binding var mode: ChatMode
     let isSending: Bool
     /// After send succeeds, true until the latest Firestore message is from the assistant (covers agentic steps).
     let awaitingAssistantReply: Bool
@@ -604,7 +605,10 @@ struct ChatComposerChrome: View {
                 }
             }
 
-            HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .bottom, spacing: 10) {
+                if !isRecording {
+                    ChatModePicker(mode: $mode)
+                }
                 if needsExpandChrome, !isRecording {
                     Button {
                         showExpandedSheet = true
@@ -648,7 +652,7 @@ struct ChatComposerChrome: View {
         let label: String = {
             if isRecording { return "Stop" }
             if hasText { return "Send" }
-            if isProcessing { return "…" }
+            if isProcessing { return "Processing" }
             return "Voice"
         }()
 
@@ -663,27 +667,38 @@ struct ChatComposerChrome: View {
                 }
             }
         } label: {
-            HStack(spacing: 8) {
+            let isEnabled = !isComposerDisabled && !isProcessingDenied
+            let fg: Color = {
+                if isRecording { return Color.white.opacity(isEnabled ? 1 : 0.6) }
+                return palette.brandGreenDarkText.opacity(isEnabled ? 1 : 0.45)
+            }()
+            let bg: Color = {
+                if isRecording { return Color.red.opacity(isEnabled ? 0.92 : 0.55) }
+                return palette.brandGreenPrimary.opacity(isEnabled ? 1 : 0.38)
+            }()
+
+            ZStack {
                 if isProcessing {
                     ProgressView()
-                        .tint(palette.brandGreenDarkText)
+                        .tint(fg)
                 } else if isRecording {
                     Image(systemName: "stop.fill")
-                    Text("Stop")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(fg)
                 } else if hasText {
-                    Image(systemName: "paperplane.fill")
-                    Text("Send")
+                    // Match the expanded composer send glyph.
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(fg)
                 } else {
                     Image(systemName: "waveform")
-                    Text("Voice")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(fg)
                 }
             }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(isRecording ? Color.white : palette.brandGreenDarkText)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(isRecording ? Color.red.opacity(0.92) : palette.brandGreenPrimary)
-            .clipShape(Capsule())
+            .frame(width: 40, height: 40)
+            .background(Circle().fill(bg))
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0 : 0.12), radius: 6, x: 0, y: 2)
         }
         .disabled(isComposerDisabled || isProcessingDenied)
         .accessibilityLabel(label)

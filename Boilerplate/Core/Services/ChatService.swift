@@ -5,6 +5,53 @@ import FirebaseFirestore
 final class ChatService {
     private var db: Firestore { Firestore.firestore() }
 
+    // MARK: - Debug JSON helpers (Timestamp-safe)
+
+    private static func jsonSafe(_ value: Any?) -> Any {
+        guard let value else { return NSNull() }
+
+        // Firestore Timestamp → ISO8601 string
+        if let ts = value as? Timestamp {
+            return ISO8601DateFormatter().string(from: ts.dateValue())
+        }
+        if let date = value as? Date {
+            return ISO8601DateFormatter().string(from: date)
+        }
+
+        // Primitive Foundation JSON types
+        if value is NSNull { return value }
+        if value is NSString || value is NSNumber { return value }
+        if let s = value as? String { return s }
+        if let b = value as? Bool { return b }
+        if let i = value as? Int { return i }
+        if let d = value as? Double { return d }
+
+        // Arrays / dictionaries
+        if let arr = value as? [Any] {
+            return arr.map { jsonSafe($0) }
+        }
+        if let dict = value as? [String: Any] {
+            var out: [String: Any] = [:]
+            out.reserveCapacity(dict.count)
+            for (k, v) in dict {
+                out[k] = jsonSafe(v)
+            }
+            return out
+        }
+
+        // Fallback: string description (prevents crashes)
+        return String(describing: value)
+    }
+
+    private static func stringifyJson(_ value: Any?) -> String? {
+        let safe = jsonSafe(value)
+        guard JSONSerialization.isValidJSONObject(safe),
+              let data = try? JSONSerialization.data(withJSONObject: safe, options: [.prettyPrinted, .sortedKeys]),
+              let str = String(data: data, encoding: .utf8)
+        else { return nil }
+        return str
+    }
+
     // MARK: - Types
 
     struct ChatThread: Identifiable, Equatable {
@@ -18,6 +65,8 @@ final class ChatService {
         let role: String
         let content: String
         let timestamp: Date?
+        /// Chat mode ("ask" | "agent" | "plan") the user sent this message in. Server reads this to pick the pipeline.
+        let mode: String?
     }
 
     struct AgenticStep: Identifiable, Equatable {
@@ -37,6 +86,10 @@ final class ChatService {
         let pendingApprovals: [ApprovalItem]
         let currentApprovalIndex: Int
         let agenticSteps: [AgenticStep]
+        /// Debug payload from the server pipeline (for Xcode console).
+        let serverDebugJson: String?
+        /// The raw Phase-1 JSON the server stored on the chat doc for this turn (for inspection).
+        let pendingClassifiedJson: String?
     }
 
     struct ApprovalDecision {
@@ -100,16 +153,26 @@ final class ChatService {
         ], merge: true)
     }
 
-    func sendUserMessage(uid: String, chatId: String, text: String) async throws {
+    /// Writes a user message with the active chat mode (`ask` | `agent` | `plan`). The Firebase Functions
+    /// `onChatUserMessageCreated` trigger reads `mode` to route to the matching pipeline.
+    func sendUserMessage(uid: String, chatId: String, text: String, mode: String = "ask") async throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
         try await ensureChatDocument(uid: uid, chatId: chatId, seedTitleFrom: trimmed)
 
+        let normalizedMode: String = {
+            switch mode {
+            case "ask", "agent", "plan": return mode
+            default: return "ask"
+            }
+        }()
+
         let doc = messagesRef(uid: uid, chatId: chatId).document()
         try await doc.setData([
             "role": "user",
             "content": trimmed,
+            "mode": normalizedMode,
             "timestamp": FieldValue.serverTimestamp()
         ], merge: true)
     }
@@ -128,7 +191,8 @@ final class ChatService {
                         id: doc.documentID,
                         role: String(data["role"] as? String ?? ""),
                         content: String(data["content"] as? String ?? ""),
-                        timestamp: ts
+                        timestamp: ts,
+                        mode: data["mode"] as? String
                     )
                 }
                 onChange(messages)
@@ -139,10 +203,16 @@ final class ChatService {
         chatRef(uid: uid, chatId: chatId).addSnapshotListener { snap, _ in
             guard let snap, snap.exists else { onChange(nil); return }
             let data = snap.data() ?? [:]
-            guard let approvalStates = data["approvalStates"] as? [[String: Any]], let first = approvalStates.first else {
+            let approvalStates = data["approvalStates"] as? [[String: Any]]
+            let first = approvalStates?.first
+            let serverDebug = data["serverDebug"] as? [String: Any]
+            let serverDebugJson: String? = Self.stringifyJson(serverDebug)
+
+            if first == nil {
                 onChange(nil)
                 return
             }
+            guard let first else { return }
 
             let awaiting = (first["awaitingApproval"] as? Bool) ?? false
             let idx = (first["currentApprovalIndex"] as? Int) ?? 0
@@ -165,7 +235,19 @@ final class ChatService {
                 )
             }
 
-            onChange(ApprovalState(awaitingApproval: awaiting, pendingApprovals: pendingApprovals, currentApprovalIndex: idx, agenticSteps: steps))
+            let pendingClassified = first["pendingClassified"]
+            let pendingClassifiedJson: String? = Self.stringifyJson(pendingClassified)
+
+            onChange(
+                ApprovalState(
+                    awaitingApproval: awaiting,
+                    pendingApprovals: pendingApprovals,
+                    currentApprovalIndex: idx,
+                    agenticSteps: steps,
+                    serverDebugJson: serverDebugJson,
+                    pendingClassifiedJson: pendingClassifiedJson
+                )
+            )
         }
     }
 
