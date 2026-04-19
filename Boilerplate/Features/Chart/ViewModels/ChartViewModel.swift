@@ -219,13 +219,15 @@ final class ChartViewModel {
         let pay = cat == "expense" ? absAmt : 0.0
         let run = (t["runningBalance"] as? NSNumber)?.doubleValue ?? (t["runningBalance"] as? Double)
         let posting = t["postingTime"] as? String ?? ""
+        let dateDisplay = (t["dateDisplay"] as? String) ?? ""
         return [
             "id": t["id"] as? String ?? "",
             "accountId": t["accountId"] as? String ?? "",
             "key": t["key"] as? String ?? "",
             "category": cat,
             "note": t["note"] as? String ?? "",
-            "date": posting,
+            "postingTime": posting,
+            "date": dateDisplay,
             "deposit": dep,
             "payment": pay,
             "balance": run ?? 0,

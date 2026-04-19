@@ -149,7 +149,8 @@ struct ChartTransactionEditSheet: View {
                 let pay = ChartBudgetMath.doubleValue(row, key: "payment")
                 let mag = max(dep, pay)
                 amountText = mag == 0 ? "" : String(format: "%.0f", mag)
-                if let s = row["date"] as? String, let d = Self.parsePostingDate(s) {
+                let rawPosting = (row["postingTime"] as? String) ?? (row["date"] as? String) ?? ""
+                if let d = Self.parsePostingDate(rawPosting) {
                     postingDate = d
                 }
             }

@@ -234,20 +234,6 @@ private struct ChatScreen: View {
                         .padding(.bottom, 8)
                     }
 
-                    // Apple-style approval focus: blur + centered confirmation.
-                    .overlay {
-                        if model.approvalState?.awaitingApproval == true,
-                           let approval = model.approvalState,
-                           approval.pendingApprovals.indices.contains(approval.currentApprovalIndex)
-                        {
-                            ChatApprovalModal(
-                                approval: approval.pendingApprovals[approval.currentApprovalIndex],
-                                onAllow: { choice in Task { await model.approve(choice: choice) } },
-                                onDeny: { Task { await model.deny() } }
-                            )
-                        }
-                    }
-
                     if isEmpty {
                         StarterPromptStrip { picked in
                             model.messageDraft = picked
@@ -300,6 +286,21 @@ private struct ChatScreen: View {
                     }
                 )
                 .ignoresSafeArea()
+            }
+            // Apple-style approval focus: blur + centered confirmation.
+            // Placed at the root so it also covers the header and composer.
+            .overlay {
+                if model.approvalState?.awaitingApproval == true,
+                   let approval = model.approvalState,
+                   approval.pendingApprovals.indices.contains(approval.currentApprovalIndex)
+                {
+                    let current = approval.pendingApprovals[approval.currentApprovalIndex]
+                    ChatApprovalModal(
+                        approval: current,
+                        onAllow: { choice in Task { await model.approve(choice: choice) } },
+                        onDeny: { Task { await model.deny(topic: current.message) } }
+                    )
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
             .fullScreenCover(isPresented: $showChartSheet) {
@@ -390,7 +391,7 @@ private struct ChatTurnInterstitialView: View {
 
     var body: some View {
         Group {
-            if showApproval || showAgentic {
+            if showAgentic {
                 VStack(alignment: .leading, spacing: 12) {
                     if showAgentic, let steps = agenticSteps {
                         AgenticProgressView(steps: steps)
@@ -417,13 +418,15 @@ private struct ChatApprovalModal: View {
     var body: some View {
         let palette = BudgeChatPalette(colorScheme: colorScheme)
         ZStack {
+            // “50% blur”: use a lighter material and reduce its strength.
             Rectangle()
-                .fill(.ultraThinMaterial)
+                .fill(.thinMaterial)
+                .opacity(0.55)
                 .ignoresSafeArea()
 
-            // Subtle dim to increase contrast and focus.
+            // Subtle dim to increase contrast and focus (keep background visible).
             Color.black
-                .opacity(colorScheme == .dark ? 0.35 : 0.18)
+                .opacity(colorScheme == .dark ? 0.18 : 0.10)
                 .ignoresSafeArea()
 
             VStack(spacing: 14) {
@@ -432,13 +435,12 @@ private struct ChatApprovalModal: View {
                     .foregroundStyle(palette.bodyText)
                     .multilineTextAlignment(.center)
 
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
+                    Spacer(minLength: 0)
                     Button("Deny") { onDeny() }
                         .buttonStyle(.plain)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(palette.bodyText.opacity(0.78))
-
-                    Spacer(minLength: 0)
 
                     if approval?.needsTypeSelection == true {
                         BudgeApprovalPrimaryButton(title: "Expense") { onAllow("expense") }
@@ -477,8 +479,8 @@ private struct BudgeApprovalPrimaryButton: View {
             Text(title)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(palette.brandGreenDarkText)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
                 .background(
                     Capsule(style: .continuous)
                         .fill(palette.brandGreenPrimary)
@@ -551,6 +553,14 @@ private struct MessageRow: View {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .strokeBorder(palette.borderPrimary, lineWidth: 2)
                         )
+                        .contextMenu {
+                            Button {
+                                UIPasteboard.general.string = message.content
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            } label: {
+                                Label("Copy", systemImage: "doc.on.doc")
+                            }
+                        }
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(ChatContentParser.parse(message.content)) { part in
@@ -657,6 +667,11 @@ private struct StepIcon: View {
                     .foregroundStyle(.red)
             case "in_progress":
                 PulsingDots()
+            case "pending":
+                // Match the rest of the chat “working” affordance: show pulsing dots
+                // instead of a static dot while we wait for the next server snapshot.
+                PulsingDots()
+                    .opacity(0.75)
             default:
                 Circle()
                     .fill(Color.secondary.opacity(0.5))

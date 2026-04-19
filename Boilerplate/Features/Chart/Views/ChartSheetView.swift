@@ -749,7 +749,23 @@ struct ChartSheetView: View {
 
     private var transactionContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            TransactionRowsList(
+                rows: model.transactions,
+                accounts: model.accounts,
+                categoryName: { model.categoryDisplayName(key: $0) },
+                selected: $selectedTxIds,
+                pendingNoteEdits: $pendingNoteEdits,
+                rowHighlightTint: palette.brandGreenPrimary,
+                highlightedRowId: highlightedTransactionId,
+                onRowHighlight: toggleTransactionRowHighlight
+            )
+
+            HStack(spacing: 10) {
+                Spacer(minLength: 0)
+                if model.txLoading {
+                    ProgressView()
+                        .scaleEffect(0.85)
+                }
                 Button {
                     Task { await model.txPrevPage() }
                 } label: {
@@ -766,20 +782,8 @@ struct ChartSheetView: View {
                     Image(systemName: "chevron.right")
                 }
                 .disabled(!model.txHasMore || model.txLoading)
-
-                Spacer()
             }
-
-            TransactionRowsList(
-                rows: model.transactions,
-                accounts: model.accounts,
-                categoryName: { model.categoryDisplayName(key: $0) },
-                selected: $selectedTxIds,
-                pendingNoteEdits: $pendingNoteEdits,
-                rowHighlightTint: palette.brandGreenPrimary,
-                highlightedRowId: highlightedTransactionId,
-                onRowHighlight: toggleTransactionRowHighlight
-            )
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 

@@ -177,6 +177,17 @@ final class ChatService {
         ], merge: true)
     }
 
+    /// iOS fallback: append an assistant message locally (used when server-triggered approval messages don't arrive).
+    func appendAssistantMessage(uid: String, chatId: String, text: String) async throws {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        try await messagesRef(uid: uid, chatId: chatId).addDocument(data: [
+            "role": "assistant",
+            "content": trimmed,
+            "timestamp": FieldValue.serverTimestamp()
+        ])
+    }
+
     // MARK: - Realtime subscriptions
 
     func subscribeMessages(uid: String, chatId: String, onChange: @escaping ([ChatMessage]) -> Void) -> ListenerRegistration {
@@ -265,7 +276,13 @@ final class ChatService {
             .limit(to: 1)
 
         let snap = try await q.getDocuments()
-        guard let doc = snap.documents.first else { return }
+        guard let doc = snap.documents.first else {
+            throw NSError(domain: "ChatService", code: 404, userInfo: [NSLocalizedDescriptionKey: "No awaiting approval found"])
+        }
+
+        #if DEBUG
+        print("☁️ [BudgeChat] resolveLatestApproval found docId=\(doc.documentID) path=\(doc.reference.path)")
+        #endif
 
         var patch: [String: Any] = [
             "status": approved ? "approved" : "denied",
@@ -273,7 +290,16 @@ final class ChatService {
         ]
         if let choice { patch["choice"] = choice }
 
+        #if DEBUG
+        print("☁️ [BudgeChat] resolveLatestApproval writing status=\(approved ? "approved" : "denied") choice=\(choice ?? "nil")")
+        #endif
         try await doc.reference.setData(patch, merge: true)
+        // NOTE: Do NOT delete `approvalStates` from the chat doc here.
+        // The `onChatApprovalDecisionUpdated` Cloud Function re-writes `approvalStates[0]`
+        // with execution steps (Allow) or an empty/awaiting=false state (Deny).
+        // Deleting it client-side races with (and overwrites) that server write,
+        // leaving the UI stuck on the local “Understanding your request” interstitial.
+        // The server is the single source of truth for approval state transitions.
     }
 }
 

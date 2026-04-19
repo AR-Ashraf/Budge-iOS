@@ -220,14 +220,63 @@ final class ChatViewModel {
     }
 
     func approve(choice: String? = nil) async {
+        // Optimistically hide only the modal (by clearing `pendingApprovals`) so the existing
+        // `agenticSteps` snapshot keeps rendering while the server transitions to execution steps.
+        // Do NOT nil out `approvalState` entirely — losing the Firestore steps snapshot causes
+        // the view to fall back to the local "Understanding your request" placeholder.
+        if let current = approvalState {
+            approvalState = ChatService.ApprovalState(
+                awaitingApproval: false,
+                pendingApprovals: [],
+                currentApprovalIndex: 0,
+                agenticSteps: current.agenticSteps,
+                serverDebugJson: current.serverDebugJson,
+                pendingClassifiedJson: current.pendingClassifiedJson
+            )
+        }
+        #if DEBUG
+        print("✅ [BudgeChat] approve tapped chatId=\(chatId) choice=\(choice ?? "nil")")
+        #endif
         do {
             try await chatService.resolveLatestApproval(uid: uid, chatId: chatId, approved: true, choice: choice)
-        } catch {}
+            #if DEBUG
+            print("✅ [BudgeChat] approve write succeeded chatId=\(chatId)")
+            #endif
+        } catch {
+            #if DEBUG
+            print("⚠️ [BudgeChat] approve failed: \(error)")
+            #endif
+        }
     }
 
-    func deny() async {
+    func deny(topic: String? = nil) async {
+        // Optimistically hide the modal. Server (`onChatApprovalDecisionUpdated`, `denied` branch)
+        // is responsible for: (a) appending the "Gotcha…" assistant message, (b) clearing
+        // `approvalStates` awaiting flag. Keep the snapshot so we don't flash a stale interstitial.
+        if let current = approvalState {
+            approvalState = ChatService.ApprovalState(
+                awaitingApproval: false,
+                pendingApprovals: [],
+                currentApprovalIndex: 0,
+                agenticSteps: current.agenticSteps,
+                serverDebugJson: current.serverDebugJson,
+                pendingClassifiedJson: current.pendingClassifiedJson
+            )
+        }
+        #if DEBUG
+        print("⛔️ [BudgeChat] deny tapped chatId=\(chatId) topic=\(topic ?? "nil")")
+        #endif
         do {
             try await chatService.resolveLatestApproval(uid: uid, chatId: chatId, approved: false)
-        } catch {}
+            #if DEBUG
+            print("⛔️ [BudgeChat] deny write succeeded chatId=\(chatId)")
+            #endif
+        } catch {
+            // If the server write itself failed, re-open the modal so the user isn't stranded.
+            awaitingAssistantReply = false
+            #if DEBUG
+            print("⚠️ [BudgeChat] deny failed: \(error)")
+            #endif
+        }
     }
 }

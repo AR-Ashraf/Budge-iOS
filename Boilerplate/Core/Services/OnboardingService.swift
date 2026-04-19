@@ -283,6 +283,8 @@ final class OnboardingService {
     struct TransactionCursor: Equatable {
         let postingTime: String
         let id: String
+        /// Matches `finance_listTransactionsDecrypted` cursor (tie-break after `postingTime`).
+        let createdAtMillis: Int64
     }
 
     struct TransactionPagePayload {
@@ -327,6 +329,7 @@ final class OnboardingService {
             if let cursor {
                 payload["startAfterPostingTime"] = cursor.postingTime
                 payload["startAfterId"] = cursor.id
+                payload["startAfterCreatedAtMillis"] = NSNumber(value: cursor.createdAtMillis)
             }
             let callable = functions.httpsCallable("finance_listTransactionsDecrypted")
             let result = try await callable.call(payload)
@@ -340,10 +343,19 @@ final class OnboardingService {
                let pt = nc["postingTime"] as? String,
                let id = nc["id"] as? String
             {
-                next = TransactionCursor(postingTime: pt, id: id)
+                let ms = Self.int64FromFirestoreJson(nc["createdAtMillis"]) ?? 0
+                next = TransactionCursor(postingTime: pt, id: id, createdAtMillis: ms)
             }
             return TransactionPagePayload(transactions: txs, hasMore: hasMore, nextCursor: next)
         }
+    }
+
+    private static func int64FromFirestoreJson(_ value: Any?) -> Int64? {
+        if let v = value as? Int64 { return v }
+        if let v = value as? Int { return Int64(v) }
+        if let v = value as? Double, v.isFinite { return Int64(v) }
+        if let n = value as? NSNumber { return n.int64Value }
+        return nil
     }
 
     func financeCreateBudgetCategory(type: String, name: String, amountForCurrentMonth: Double?, year: String?) async throws -> String {
