@@ -263,6 +263,14 @@ private struct ChatScreen: View {
                             model.messageDraft = newValue
                         }
                     }
+                    .onChange(of: transcriber.state) { oldValue, newValue in
+                        guard case .recording = oldValue else { return }
+                        if case .recording = newValue { return }
+                        let t = transcriber.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !t.isEmpty {
+                            model.messageDraft = transcriber.transcript
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(palette.screenBackground.ignoresSafeArea())

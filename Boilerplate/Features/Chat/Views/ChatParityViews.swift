@@ -191,26 +191,45 @@ struct StarterPromptStrip: View {
     }
 }
 
-// MARK: - Voice waveform
+// MARK: - Voice spectrum (real levels, scrolls right → left)
 
-struct VoiceWaveformBars: View {
-    let level: CGFloat
+/// Bars reflect sequential RMS samples from the mic (several per buffer). Oldest on the left, newest on the right — new audio enters on the right and pushes older samples left.
+/// `revealProgress` 0…1: area unmasks from the **trailing** edge toward the leading edge over the first seconds of recording.
+struct VoiceScrollingSpectrumView: View {
+    let samples: [CGFloat]
     let palette: BudgeChatPalette
+    /// Horizontal reveal 0…1 (right → left); use `transcriber.waveformRevealProgress`.
+    var revealProgress: CGFloat = 1
 
-    private let barCount = 24
+    private let maxBars = 48
+    private let minBarHeight: CGFloat = 3
+    private let maxBarHeight: CGFloat = 38
+
+    private var displayLevels: [CGFloat] {
+        let pad: CGFloat = 0.06
+        if samples.count >= maxBars {
+            return Array(samples.suffix(maxBars))
+        }
+        let padCount = maxBars - samples.count
+        return Array(repeating: pad, count: padCount) + samples
+    }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 3) {
-            ForEach(0 ..< barCount, id: \.self) { i in
-                let phase = sin(Double(i) * 0.45 + Double(level) * 4)
-                let h = 8 + CGFloat(phase * 0.5 + 0.5) * 22 * max(0.15, level)
+        HStack(alignment: .center, spacing: 2) {
+            ForEach(Array(displayLevels.enumerated()), id: \.offset) { _, level in
+                let h = minBarHeight + min(1, max(0, level)) * (maxBarHeight - minBarHeight)
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(palette.brandGreenPrimary)
-                    .frame(width: 3, height: h)
+                    .frame(width: 3, height: max(minBarHeight, min(maxBarHeight, h)))
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
+        .mask {
+            Rectangle()
+                .scaleEffect(x: max(0.04, min(1, revealProgress)), y: 1, anchor: .trailing)
+        }
+        .accessibilityLabel("Voice level")
     }
 }
 
@@ -510,8 +529,27 @@ struct ChatComposerChrome: View {
         VStack(alignment: .trailing, spacing: 10) {
             VStack(alignment: .leading, spacing: 0) {
                 if isRecording {
-                    VoiceWaveformBars(level: transcriber.meterLevel, palette: palette)
-                        .accessibilityLabel("Recording")
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(formattedRecordingElapsed(transcriber.recordingElapsed))
+                                .font(.caption.monospacedDigit().weight(.semibold))
+                                .foregroundStyle(transcriber.isRecordingEndingSoon ? Color.red : palette.bodyText)
+                            Text("/ 1:00")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(transcriber.isRecordingEndingSoon ? Color.red.opacity(0.85) : palette.bodyText.opacity(0.5))
+                            Spacer(minLength: 0)
+                            if transcriber.isRecordingEndingSoon {
+                                Text("Wrapping up…")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(Color.red.opacity(0.9))
+                            }
+                        }
+                        VoiceScrollingSpectrumView(
+                            samples: transcriber.spectrumHistory,
+                            palette: palette,
+                            revealProgress: transcriber.waveformRevealProgress
+                        )
+                    }
                 } else {
                     ZStack(alignment: .topLeading) {
                         ComposerMultilineTextView(
@@ -560,6 +598,11 @@ struct ChatComposerChrome: View {
             }
             .background(palette.inputInnerBackground)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .onChange(of: isRecording) { _, recording in
+                if !recording {
+                    multilineContentHeight = 0
+                }
+            }
 
             HStack(alignment: .center, spacing: 10) {
                 if needsExpandChrome, !isRecording {
@@ -603,18 +646,18 @@ struct ChatComposerChrome: View {
     @ViewBuilder
     private var primaryCTA: some View {
         let label: String = {
-            if hasText { return "Send" }
             if isRecording { return "Stop" }
+            if hasText { return "Send" }
             if isProcessing { return "…" }
             return "Voice"
         }()
 
         Button {
             Task {
-                if hasText {
+                if isRecording {
+                    await transcriber.stopRecording(reason: .user)
+                } else if hasText {
                     onSend()
-                } else if isRecording {
-                    await transcriber.stopRecording()
                 } else if !isProcessing {
                     await transcriber.start()
                 }
@@ -624,12 +667,12 @@ struct ChatComposerChrome: View {
                 if isProcessing {
                     ProgressView()
                         .tint(palette.brandGreenDarkText)
-                } else if hasText {
-                    Image(systemName: "paperplane.fill")
-                    Text("Send")
                 } else if isRecording {
                     Image(systemName: "stop.fill")
                     Text("Stop")
+                } else if hasText {
+                    Image(systemName: "paperplane.fill")
+                    Text("Send")
                 } else {
                     Image(systemName: "waveform")
                     Text("Voice")
@@ -646,10 +689,18 @@ struct ChatComposerChrome: View {
         .accessibilityLabel(label)
     }
 
+    /// Only hard-block new sessions when mic/speech permissions are denied. Recoverable recognition errors allow retry (`start()` calls `cancelSession()`).
     private var isProcessingDenied: Bool {
         if case .denied = transcriber.state { return true }
-        if case .error = transcriber.state { return true }
         return false
+    }
+
+    private func formattedRecordingElapsed(_ t: TimeInterval) -> String {
+        let capped = min(t, SpeechTranscriber.maxRecordingDuration)
+        let total = Int(capped.rounded(.down))
+        let m = total / 60
+        let s = total % 60
+        return String(format: "%d:%02d", m, s)
     }
 }
 
