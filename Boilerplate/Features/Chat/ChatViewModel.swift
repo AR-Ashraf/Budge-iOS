@@ -28,10 +28,12 @@ final class ChatViewModel {
 
     var headerCurrencyCode: String = "USD"
     var headerBalanceDisplay: String = "0"
-    /// True while loading profile + `finance_getSnapshot` for user-level balances.
+    /// True only during the **first** profile + `finance_getSnapshot` fetch for this screen session (no spinner on send / background refresh).
     var headerBalanceLoading: Bool = false
 
     @ObservationIgnored private var financeHeaderTask: Task<Void, Never>?
+    /// Set synchronously on first `refreshFinanceHeader` entry so overlapping calls (e.g. send while initial fetch runs) never toggle the header spinner.
+    @ObservationIgnored private var financeHeaderInitialFetchClaimed = false
 
     init(chatService: ChatService, onboarding: OnboardingService, uid: String, chatId: String = "default") {
         self.chatService = chatService
@@ -71,7 +73,6 @@ final class ChatViewModel {
         Task { await refreshChatThreads() }
 
         financeHeaderTask?.cancel()
-        headerBalanceLoading = true
         financeHeaderTask = Task { [weak self] in
             await self?.refreshFinanceHeader()
         }
@@ -105,7 +106,6 @@ final class ChatViewModel {
         approvalState = nil
         awaitingAssistantReply = false
         start()
-        Task { await refreshFinanceHeader() }
     }
 
     @MainActor
@@ -141,8 +141,16 @@ final class ChatViewModel {
 
     @MainActor
     func refreshFinanceHeader() async {
-        headerBalanceLoading = true
-        defer { headerBalanceLoading = false }
+        let showInitialSpinner = !financeHeaderInitialFetchClaimed
+        financeHeaderInitialFetchClaimed = true
+        if showInitialSpinner {
+            headerBalanceLoading = true
+        }
+        defer {
+            if showInitialSpinner {
+                headerBalanceLoading = false
+            }
+        }
         do {
             async let profileTask = onboarding.fetchUserProfile(uid: uid)
             async let snapTask = onboarding.fetchFinanceSnapshot()
