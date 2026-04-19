@@ -77,17 +77,12 @@ private struct ChatScreen: View {
         let awaiting = model.awaitingAssistantReply
         let lastIsUser = model.messages.last?.role == "user"
         let awaitingUserTurn = awaiting && lastIsUser
-        let optimisticClassify: [ChatService.AgenticStep] = [
-            ChatService.AgenticStep(
-                id: "classify",
-                message: "Understanding your request",
-                status: "in_progress"
-            ),
-        ]
+        /// While Firestore is between turns, show mode-appropriate copy (Ask/Plan use `ai-response`; Agent uses classify).
+        let optimisticRow = Self.optimisticAgenticRow(forLastUserModeIn: model.messages)
 
         if let steps = fs, !steps.isEmpty {
             if Self.firestoreAgenticLooksStaleFromPriorTurn(steps: steps) {
-                if awaitingUserTurn { return optimisticClassify }
+                if awaitingUserTurn { return optimisticRow }
                 if awaiting, !lastIsUser { return nil }
                 return steps
             }
@@ -95,9 +90,44 @@ private struct ChatScreen: View {
         }
 
         if awaitingUserTurn {
-            return optimisticClassify
+            return optimisticRow
         }
         return nil
+    }
+
+    /// Mode on the latest user bubble (from Firestore), for progress labels before/while snapshots catch up.
+    private static func optimisticAgenticRow(forLastUserModeIn messages: [ChatService.ChatMessage]) -> [ChatService.AgenticStep] {
+        let mode = lastUserMessage(in: messages)?.mode?.lowercased()
+        switch mode {
+        case "plan":
+            return [
+                ChatService.AgenticStep(
+                    id: "ai-response",
+                    message: "Planning your request",
+                    status: "in_progress"
+                ),
+            ]
+        case "ask":
+            return [
+                ChatService.AgenticStep(
+                    id: "ai-response",
+                    message: "Thinking for a bit",
+                    status: "in_progress"
+                ),
+            ]
+        default:
+            return [
+                ChatService.AgenticStep(
+                    id: "classify",
+                    message: "Understanding your request",
+                    status: "in_progress"
+                ),
+            ]
+        }
+    }
+
+    private static func lastUserMessage(in messages: [ChatService.ChatMessage]) -> ChatService.ChatMessage? {
+        messages.last { $0.role == "user" }
     }
 
     /// Prior-turn pipeline often leaves all steps terminal until the next `updateAgenticStepsInChatDoc` — treat as stale while awaiting a reply for the latest user bubble.
