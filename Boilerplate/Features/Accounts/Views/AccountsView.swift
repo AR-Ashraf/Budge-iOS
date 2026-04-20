@@ -115,6 +115,14 @@ struct AccountsView: View {
                 }
                 .padding(16)
             }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // Tap outside any account card exits selection mode ("Done selecting").
+                if isSelecting {
+                    isSelecting = false
+                    selectedIds.removeAll()
+                }
+            }
             .onChange(of: vm.rows.count) { _, _ in
                 scrollToFocus(proxy: proxy, rows: vm.rows)
             }
@@ -144,7 +152,7 @@ struct AccountsView: View {
                     if isSelecting, !selectedIds.isEmpty {
                         Button(role: .destructive) {
                             if let def = vm.defaultAccountId, selectedIds.contains(def) {
-                                vm.errorMessage = "Main account cannot be deleted"
+                                vm.errorMessage = "Main Account cannot be deleted"
                                 return
                             }
                             showDeleteConfirm = true
@@ -172,60 +180,80 @@ struct AccountsView: View {
     @ViewBuilder
     private func accountCard(vm: AccountsViewModel, row: AccountDisplayRow) -> some View {
         let isDefault = vm.defaultAccountId == row.id
-        Button {
+        HStack(alignment: .top, spacing: 12) {
             if isSelecting {
+                Image(systemName: selectedIds.contains(row.id) ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(selectedIds.contains(row.id) ? palette.brandGreenPrimary : .secondary)
+                    .font(.title3)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Image(systemName: row.type == "liability" ? "creditcard" : "wallet.pass")
+                        .foregroundStyle(palette.bodyText.opacity(0.85))
+                    Text(row.displayName)
+                        .font(.headline)
+                        .foregroundStyle(palette.bodyText)
+                        .lineLimit(2)
+                    if isDefault {
+                        Text("Main")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(palette.brandGreenPrimary.opacity(0.25))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+                    Spacer()
+                    Text(formatMoney(row.currentBalance, code: row.currency))
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(row.currentBalance >= 0 ? Color.green : Color.red)
+                }
+                labeledRow("Type", value: row.type.capitalized)
+                labeledRow("Currency", value: row.currency)
+                labeledRow("Starting balance", value: formatMoney(row.startingBalance, code: row.currency))
+                labeledRow("Account no.", value: row.accountNumber)
+                labeledRow("Bank", value: row.bankName)
+            }
+        }
+        .padding(14)
+        .background(palette.cardSurface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(palette.borderPrimary.opacity(0.5), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .contentShape(Rectangle())
+        .highPriorityGesture(
+            TapGesture().onEnded {
+                if isSelecting {
+                    if selectedIds.contains(row.id) {
+                        selectedIds.remove(row.id)
+                    } else {
+                        selectedIds.insert(row.id)
+                    }
+                } else {
+                    editingRow = row
+                }
+            }
+        )
+        .contextMenu {
+            Button("Select") {
+                isSelecting = true
+                selectedIds = [row.id]
+            }
+        }
+        .onLongPressGesture(minimumDuration: 0.35) {
+            // Long-press enters selection mode and selects the pressed account.
+            if !isSelecting {
+                isSelecting = true
+                selectedIds = [row.id]
+            } else {
                 if selectedIds.contains(row.id) {
                     selectedIds.remove(row.id)
                 } else {
                     selectedIds.insert(row.id)
                 }
-            } else {
-                editingRow = row
             }
-        } label: {
-            HStack(alignment: .top, spacing: 12) {
-                if isSelecting {
-                    Image(systemName: selectedIds.contains(row.id) ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(selectedIds.contains(row.id) ? palette.brandGreenPrimary : .secondary)
-                        .font(.title3)
-                }
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Image(systemName: row.type == "liability" ? "creditcard" : "wallet.pass")
-                            .foregroundStyle(palette.bodyText.opacity(0.85))
-                        Text(row.displayName)
-                            .font(.headline)
-                            .foregroundStyle(palette.bodyText)
-                            .lineLimit(2)
-                        if isDefault {
-                            Text("Main")
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(palette.brandGreenPrimary.opacity(0.25))
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                        }
-                        Spacer()
-                        Text(formatMoney(row.currentBalance, code: row.currency))
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(row.currentBalance >= 0 ? Color.green : Color.red)
-                    }
-                    labeledRow("Type", value: row.type.capitalized)
-                    labeledRow("Currency", value: row.currency)
-                    labeledRow("Starting balance", value: formatMoney(row.startingBalance, code: row.currency))
-                    labeledRow("Account no.", value: row.accountNumber)
-                    labeledRow("Bank", value: row.bankName)
-                }
-            }
-            .padding(14)
-            .background(palette.cardSurface)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(palette.borderPrimary.opacity(0.5), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .buttonStyle(.plain)
     }
 
     private func labeledRow(_ title: String, value: String) -> some View {
@@ -254,7 +282,7 @@ struct AccountsView: View {
     private func runBulkDelete() async {
         guard let vm = viewModel else { return }
         if let def = vm.defaultAccountId, selectedIds.contains(def) {
-            vm.errorMessage = "Main account cannot be deleted"
+            vm.errorMessage = "Main Account cannot be deleted"
             return
         }
         isDeleting = true
