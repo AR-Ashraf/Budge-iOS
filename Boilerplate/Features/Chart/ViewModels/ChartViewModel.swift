@@ -219,11 +219,13 @@ final class ChartViewModel {
         let dep = cat == "income" ? absAmt : 0.0
         let pay = cat == "expense" ? absAmt : 0.0
         let run = (t["runningBalance"] as? NSNumber)?.doubleValue ?? (t["runningBalance"] as? Double)
+        let userRun = (t["userRunningBalance"] as? NSNumber)?.doubleValue ?? (t["userRunningBalance"] as? Double)
         let posting = t["postingTime"] as? String ?? ""
         let dateDisplay = (t["dateDisplay"] as? String) ?? ""
         return [
             "id": t["id"] as? String ?? "",
             "accountId": t["accountId"] as? String ?? "",
+            "accountCurrency": t["accountCurrency"] as? String ?? "",
             "key": t["key"] as? String ?? "",
             "category": cat,
             "note": t["note"] as? String ?? "",
@@ -231,8 +233,10 @@ final class ChartViewModel {
             "date": dateDisplay,
             "deposit": dep,
             "payment": pay,
-            "balance": run ?? 0,
+            // Account running balance (account currency)
             "accountBalance": run ?? 0,
+            // Global running balance across all accounts (user currency)
+            "balance": userRun ?? 0,
         ]
     }
 
@@ -345,6 +349,7 @@ final class ChartViewModel {
     @MainActor
     func updateTransactionEdits(
         txId: String,
+        accountId: String,
         category: String,
         key: String,
         amount: Double,
@@ -353,6 +358,7 @@ final class ChartViewModel {
     ) async {
         do {
             try await onboarding.financeUpdateTransaction(txId: txId, patch: [
+                "accountId": accountId,
                 "category": category,
                 "key": key.lowercased(),
                 "amount": amount,

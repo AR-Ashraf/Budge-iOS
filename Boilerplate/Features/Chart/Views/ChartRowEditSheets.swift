@@ -91,28 +91,40 @@ struct ChartTransactionEditSheet: View {
     @Environment(\.dismiss) private var dismiss
     let palette: BudgeChatPalette
     let row: [String: Any]
-    let onCommit: (_ category: String, _ key: String, _ amount: Double, _ note: String, _ postingISO: String) async -> Void
+    let accounts: [OnboardingService.FinanceAccountSnapshot]
+    let incomeTypes: [[String: Any]]
+    let expenseTypes: [[String: Any]]
+    let onCommit: (_ accountId: String, _ category: String, _ key: String, _ amount: Double, _ note: String, _ postingISO: String) async -> Void
 
     @State private var category: String = "expense"
+    @State private var accountId: String = ""
     @State private var key: String = ""
     @State private var amountText: String = ""
     @State private var note: String = ""
     @State private var postingDate: Date = Date()
     @State private var isSaving = false
 
+    private var filteredCategoryRows: [[String: Any]] {
+        category == "income" ? incomeTypes : expenseTypes
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Type") {
-                    Picker("Category", selection: $category) {
-                        Text("Income").tag("income")
-                        Text("Expense").tag("expense")
-                    }
-                }
                 Section("Details") {
-                    TextField("Category key", text: $key)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                    Picker("Account", selection: $accountId) {
+                        ForEach(accounts, id: \.id) { a in
+                            Text(a.name ?? a.id).tag(a.id)
+                        }
+                    }
+                    Picker("Category", selection: $key) {
+                        ForEach(filteredCategoryRows.indices, id: \.self) { i in
+                            let r = filteredCategoryRows[i]
+                            let k = (r["key"] as? String) ?? ""
+                            let name = (r["name"] as? String) ?? k
+                            Text(name).tag(k)
+                        }
+                    }
                     TextField("Amount", text: $amountText)
                         .keyboardType(.decimalPad)
                     TextField("Note", text: $note, axis: .vertical)
@@ -143,6 +155,7 @@ struct ChartTransactionEditSheet: View {
             }
             .onAppear {
                 category = (row["category"] as? String)?.lowercased() == "income" ? "income" : "expense"
+                accountId = (row["accountId"] as? String) ?? ""
                 key = (row["key"] as? String) ?? ""
                 note = (row["note"] as? String) ?? ""
                 let dep = ChartBudgetMath.doubleValue(row, key: "deposit")
@@ -153,6 +166,12 @@ struct ChartTransactionEditSheet: View {
                 if let d = Self.parsePostingDate(rawPosting) {
                     postingDate = d
                 }
+                if accountId.isEmpty, let first = accounts.first {
+                    accountId = first.id
+                }
+                if key.isEmpty, let firstKey = filteredCategoryRows.first?["key"] as? String {
+                    key = firstKey
+                }
             }
         }
     }
@@ -160,13 +179,16 @@ struct ChartTransactionEditSheet: View {
     @MainActor
     private func saveTransactionEdits() async {
         let amt = Double(amountText.replacingOccurrences(of: ",", with: "")) ?? 0
-        guard amt > 0, !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard amt > 0,
+              !accountId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return }
         let iso = ISO8601DateFormatter().string(from: postingDate)
         let k = key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         dismissKeyboardForSheet()
         try? await Task.sleep(nanoseconds: 350_000_000)
         isSaving = true
-        await onCommit(category, k, amt, note, iso)
+        await onCommit(accountId, category, k, amt, note, iso)
         isSaving = false
         dismiss()
     }

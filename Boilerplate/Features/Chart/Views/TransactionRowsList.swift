@@ -7,6 +7,7 @@ struct TransactionRowsList: View {
     let rows: [[String: Any]]
     let accounts: [OnboardingService.FinanceAccountSnapshot]
     let categoryName: (String) -> String
+    let userCurrency: String
     @Binding var selected: Set<String>
     /// Draft note text by transaction id when different from `rows` (toolbar Save).
     @Binding var pendingNoteEdits: [String: String]
@@ -101,22 +102,22 @@ struct TransactionRowsList: View {
             }
 
             txColumn(width: colWidths[3], alignment: .trailing) {
-                Text(fmt(row["payment"]))
+                Text(fmt(row["payment"], currencyCode: accountCurrency(row)))
                     .font(.caption.monospacedDigit())
             }
 
             txColumn(width: colWidths[4], alignment: .trailing) {
-                Text(fmt(row["deposit"]))
+                Text(fmt(row["deposit"], currencyCode: accountCurrency(row)))
                     .font(.caption.monospacedDigit())
             }
 
             txColumn(width: colWidths[5], alignment: .trailing) {
-                Text(fmt(row["accountBalance"]))
+                Text(fmt(row["accountBalance"], currencyCode: accountCurrency(row)))
                     .font(.caption.monospacedDigit())
             }
 
             txColumn(width: colWidths[6], alignment: .trailing) {
-                Text(fmt(row["balance"]))
+                Text(fmt(row["balance"], currencyCode: userCurrency))
                     .font(.caption.monospacedDigit())
             }
 
@@ -163,7 +164,7 @@ struct TransactionRowsList: View {
             .frame(width: width)
     }
 
-    private func fmt(_ v: Any?) -> String {
+    private func fmt(_ v: Any?, currencyCode: String) -> String {
         let d: Double
         if let x = v as? Double {
             d = x
@@ -175,12 +176,31 @@ struct TransactionRowsList: View {
             return "—"
         }
         if abs(d) < 0.0001 { return "—" }
-        return String(format: "%.0f", d)
+        let code = currencyCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let nf = NumberFormatter()
+        nf.numberStyle = .currency
+        nf.currencyCode = code
+        // Some locales render "BDT" instead of the ৳ symbol; enforce product expectation.
+        if code == "BDT" {
+            nf.currencySymbol = "৳"
+        }
+        nf.maximumFractionDigits = 0
+        nf.minimumFractionDigits = 0
+        return nf.string(from: NSNumber(value: d)) ?? "\(currencyCode.uppercased()) \(String(format: "%.0f", d))"
     }
 
     private func accountName(_ id: String?) -> String {
         guard let id else { return "—" }
         return accounts.first(where: { $0.id == id })?.name ?? id
+    }
+
+    private func accountCurrency(_ row: [String: Any]) -> String {
+        if let c = row["accountCurrency"] as? String, !c.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return c.uppercased()
+        }
+        let aid = row["accountId"] as? String
+        let c = accounts.first(where: { $0.id == aid })?.currency
+        return (c ?? userCurrency).uppercased()
     }
 }
 
@@ -199,29 +219,11 @@ private struct NoteCell: View {
     let note: String
     @Binding var pendingNoteEdits: [String: String]
 
-    @State private var text: String = ""
-
     var body: some View {
-        TextField("Note", text: $text)
+        // Note column is read-only; editing happens via the transaction edit slider.
+        let shown = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        Text(shown.isEmpty ? "—" : shown)
             .font(.caption)
-            .onAppear {
-                text = note
-                syncPending()
-            }
-            .onChange(of: note) { _, n in
-                text = n
-                syncPending()
-            }
-            .onChange(of: text) { _, _ in
-                syncPending()
-            }
-    }
-
-    private func syncPending() {
-        if text == note {
-            pendingNoteEdits.removeValue(forKey: txId)
-        } else {
-            pendingNoteEdits[txId] = text
-        }
+            .lineLimit(2)
     }
 }

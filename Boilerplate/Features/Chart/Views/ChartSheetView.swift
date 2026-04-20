@@ -23,6 +23,7 @@ struct ChartSheetView: View {
     @State private var newTxAmount: String = ""
     @State private var newTxKey = ""
     @State private var newTxAccountId = ""
+    @State private var isSavingNewTx = false
 
     @State private var activeEditSheet: ChartEditSheet?
     @State private var showEditSingleSelectionAlert = false
@@ -210,44 +211,54 @@ struct ChartSheetView: View {
                                 Text(a.name ?? a.id).tag(a.id)
                             }
                         }
-                        TextField("Amount", text: $newTxAmount)
-                            .keyboardType(.decimalPad)
-                        TextField("Category key", text: $newTxKey)
                         Picker("Type", selection: $newCategoryType) {
                             Text("Income").tag("income")
                             Text("Expense").tag("expense")
                         }
+                        Picker("Category", selection: $newTxKey) {
+                            let rows = newCategoryType == "income" ? model.incomeTypes : model.expenseTypes
+                            ForEach(rows.indices, id: \.self) { i in
+                                let r = rows[i]
+                                let k = (r["key"] as? String) ?? ""
+                                let name = (r["name"] as? String) ?? k
+                                Text(name).tag(k)
+                            }
+                        }
+                        TextField(newCategoryType == "income" ? "Deposit amount" : "Payment amount", text: $newTxAmount)
+                            .keyboardType(.decimalPad)
                     }
                     .navigationTitle("New transaction")
                     .onAppear {
                         if newTxAccountId.isEmpty, let first = model.accounts.first {
                             newTxAccountId = first.id
                         }
+                        if newTxKey.isEmpty {
+                            let rows = newCategoryType == "income" ? model.incomeTypes : model.expenseTypes
+                            if let firstKey = rows.first?["key"] as? String {
+                                newTxKey = firstKey
+                            }
+                        }
+                    }
+                    .onChange(of: newCategoryType) { _, _ in
+                        let rows = newCategoryType == "income" ? model.incomeTypes : model.expenseTypes
+                        if let firstKey = rows.first?["key"] as? String {
+                            newTxKey = firstKey
+                        } else {
+                            newTxKey = ""
+                        }
                     }
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Cancel") { showCreateTx = false }
+                                .disabled(isSavingNewTx)
                         }
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Save") {
-                                Task {
-                                    let amt = Double(newTxAmount) ?? 0
-                                    guard amt > 0, !newTxKey.isEmpty else { return }
-                                    let iso = ISO8601DateFormatter().string(from: Date())
-                                    do {
-                                        try await model.createTransaction(
-                                            accountId: newTxAccountId,
-                                            category: newCategoryType,
-                                            key: newTxKey.lowercased(),
-                                            amount: amt,
-                                            note: nil,
-                                            postingTime: iso
-                                        )
-                                        newTxAmount = ""
-                                        newTxKey = ""
-                                        showCreateTx = false
-                                        await model.loadTransactions(reset: true)
-                                    } catch {}
+                            if isSavingNewTx {
+                                ProgressView()
+                                    .tint(palette.brandGreenPrimary)
+                            } else {
+                                Button("Save") {
+                                    Task { await saveNewTransaction() }
                                 }
                             }
                         }
@@ -305,10 +316,14 @@ struct ChartSheetView: View {
                     ChartTransactionEditSheet(
                         palette: palette,
                         row: row,
-                        onCommit: { category, key, amount, note, iso in
+                        accounts: model.accounts,
+                        incomeTypes: model.incomeTypes,
+                        expenseTypes: model.expenseTypes,
+                        onCommit: { accountId, category, key, amount, note, iso in
                             let id = row["id"] as? String ?? ""
                             await model.updateTransactionEdits(
                                 txId: id,
+                                accountId: accountId,
                                 category: category,
                                 key: key,
                                 amount: amount,
@@ -330,6 +345,32 @@ struct ChartSheetView: View {
             .sheet(item: $sharePayload) { payload in
                 ShareSheet(activityItems: [payload.url])
             }
+        }
+    }
+
+    @MainActor
+    private func saveNewTransaction() async {
+        guard !isSavingNewTx else { return }
+        let amt = Double(newTxAmount) ?? 0
+        guard amt > 0, !newTxKey.isEmpty else { return }
+        isSavingNewTx = true
+        defer { isSavingNewTx = false }
+        let iso = ISO8601DateFormatter().string(from: Date())
+        do {
+            try await model.createTransaction(
+                accountId: newTxAccountId,
+                category: newCategoryType,
+                key: newTxKey.lowercased(),
+                amount: amt,
+                note: nil,
+                postingTime: iso
+            )
+            newTxAmount = ""
+            newTxKey = ""
+            showCreateTx = false
+            await model.loadTransactions(reset: true)
+        } catch {
+            // Errors are surfaced via `model.errorMessage` in the sheet’s parent alert.
         }
     }
 
@@ -763,6 +804,7 @@ struct ChartSheetView: View {
                 rows: model.transactions,
                 accounts: model.accounts,
                 categoryName: { model.categoryDisplayName(key: $0) },
+                userCurrency: model.userCurrency,
                 selected: $selectedTxIds,
                 pendingNoteEdits: $pendingNoteEdits,
                 rowHighlightTint: palette.brandGreenPrimary,
