@@ -131,11 +131,23 @@ final class ChatService {
     func updateChatTitle(uid: String, chatId: String, newTitle: String) async throws {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        #if DEBUG
+        print("[ChatService] updateChatTitle start uid=\(uid) chatId=\(chatId) title=\(trimmed)")
+        #endif
         try await chatRef(uid: uid, chatId: chatId).setData(["title": trimmed], merge: true)
+        #if DEBUG
+        print("[ChatService] updateChatTitle done uid=\(uid) chatId=\(chatId)")
+        #endif
     }
 
     func deleteChat(uid: String, chatId: String) async throws {
+        #if DEBUG
+        print("[ChatService] deleteChat start uid=\(uid) chatId=\(chatId)")
+        #endif
         try await chatRef(uid: uid, chatId: chatId).delete()
+        #if DEBUG
+        print("[ChatService] deleteChat done uid=\(uid) chatId=\(chatId)")
+        #endif
     }
 
     /// Seeds the chat doc before the first message. The **canonical title** is set server-side by the

@@ -81,6 +81,10 @@ struct ChatSidebarDrawer: View {
     @State private var pendingRenameThread: ChatService.ChatThread?
     @State private var renameValue: String = ""
     @State private var pendingDeleteThread: ChatService.ChatThread?
+    @State private var showDeleteConfirm: Bool = false
+    @State private var isThreadMutationInFlight: Bool = false
+    @State private var threadMutationLabel: String = "Updating…"
+    @State private var threadMutationError: String?
     @State private var showProfileSheet: Bool = false
     @State private var showProfileComingSoon: Bool = false
     @State private var presented: Bool = false
@@ -113,6 +117,21 @@ struct ChatSidebarDrawer: View {
                     .animation(.easeInOut(duration: 0.28), value: presented)
                     .animation(.interactiveSpring(response: 0.32, dampingFraction: 0.86, blendDuration: 0.15), value: drawerOffsetX)
                     .gesture(dragToDismissGesture)
+
+                if isThreadMutationInFlight {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                    ProgressView(threadMutationLabel)
+                        .padding(14)
+                        .background(palette.cardSurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(palette.borderPrimary.opacity(0.5), lineWidth: 1)
+                        )
+                        .tint(palette.brandGreenPrimary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                }
             }
             .onAppear {
                 onDismissKeyboard()
@@ -126,22 +145,42 @@ struct ChatSidebarDrawer: View {
                 presented = false
                 drawerOffsetX = 0
             }
-            .alert("Rename chat", isPresented: Binding(get: { pendingRenameThread != nil }, set: { if !$0 { pendingRenameThread = nil } })) {
-                TextField("Title", text: $renameValue)
-                Button("Cancel", role: .cancel) { pendingRenameThread = nil }
-                Button("Save") {
-                    Task { await commitRename() }
-                }
+            // Avoid SwiftUI `.alert` with TextField here (UIAlertController can hang/glitch inside this drawer).
+            .sheet(item: $pendingRenameThread) { t in
+                RenameChatSheet(
+                    palette: palette,
+                    initialTitle: t.title,
+                    isSaving: isThreadMutationInFlight,
+                    onCancel: { pendingRenameThread = nil },
+                    onSave: { newTitle in
+                        renameValue = newTitle
+                        Task { await commitRename() }
+                    }
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
             }
             .confirmationDialog(
                 "Delete this chat?",
-                isPresented: Binding(get: { pendingDeleteThread != nil }, set: { if !$0 { pendingDeleteThread = nil } }),
+                isPresented: $showDeleteConfirm,
                 titleVisibility: .visible
             ) {
                 Button("Delete", role: .destructive) {
                     Task { await commitDelete() }
                 }
-                Button("Cancel", role: .cancel) { pendingDeleteThread = nil }
+                Button("Cancel", role: .cancel) {
+                    pendingDeleteThread = nil
+                }
+            } message: {
+                Text("This will remove the chat from your list.")
+            }
+            .alert("Couldn’t update chat", isPresented: Binding(
+                get: { threadMutationError != nil },
+                set: { if !$0 { threadMutationError = nil } }
+            )) {
+                Button("OK", role: .cancel) { threadMutationError = nil }
+            } message: {
+                Text(threadMutationError ?? "")
             }
         }
     }
@@ -346,13 +385,25 @@ struct ChatSidebarDrawer: View {
             model.openChat(chatId: t.id)
             dismiss()
         }
+        .onLongPressGesture(minimumDuration: 0.25) {
+            #if DEBUG
+            print("[ChatSidebar] longPress thread id=\(t.id) title=\(t.title)")
+            #endif
+        }
         .contextMenu {
             Button("Rename") {
+                #if DEBUG
+                print("[ChatSidebar] contextMenu Rename tapped id=\(t.id) title=\(t.title)")
+                #endif
                 pendingRenameThread = t
                 renameValue = t.title
             }
             Button("Delete", role: .destructive) {
+                #if DEBUG
+                print("[ChatSidebar] contextMenu Delete tapped id=\(t.id) title=\(t.title)")
+                #endif
                 pendingDeleteThread = t
+                showDeleteConfirm = true
             }
         }
         .accessibilityAddTraits(.isButton)
@@ -474,14 +525,94 @@ struct ChatSidebarDrawer: View {
         defer { pendingRenameThread = nil }
         let trimmed = renameValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        await model.renameChatThread(chatId: t.id, newTitle: trimmed)
+        isThreadMutationInFlight = true
+        threadMutationLabel = "Updating…"
+        #if DEBUG
+        print("[ChatSidebar] commitRename start id=\(t.id) newTitle=\(trimmed)")
+        #endif
+        let ok = await model.renameChatThreadResult(chatId: t.id, newTitle: trimmed)
+        isThreadMutationInFlight = false
+        #if DEBUG
+        print("[ChatSidebar] commitRename done id=\(t.id) ok=\(ok)")
+        #endif
+        if !ok {
+            threadMutationError = "Rename failed. Please try again."
+        }
     }
 
     @MainActor
     private func commitDelete() async {
         guard let t = pendingDeleteThread else { return }
-        defer { pendingDeleteThread = nil }
-        await model.deleteChatThread(chatId: t.id)
+        defer {
+            pendingDeleteThread = nil
+            showDeleteConfirm = false
+        }
+        isThreadMutationInFlight = true
+        threadMutationLabel = "Deleting…"
+        #if DEBUG
+        print("[ChatSidebar] commitDelete start id=\(t.id)")
+        #endif
+        let ok = await model.deleteChatThreadResult(chatId: t.id)
+        isThreadMutationInFlight = false
+        #if DEBUG
+        print("[ChatSidebar] commitDelete done id=\(t.id) ok=\(ok)")
+        #endif
+        if !ok {
+            threadMutationError = "Delete failed. Please try again."
+        }
+    }
+}
+
+private struct RenameChatSheet: View {
+    let palette: BudgeChatPalette
+    let initialTitle: String
+    let isSaving: Bool
+    let onCancel: () -> Void
+    let onSave: (String) -> Void
+
+    @State private var title: String
+
+    init(
+        palette: BudgeChatPalette,
+        initialTitle: String,
+        isSaving: Bool,
+        onCancel: @escaping () -> Void,
+        onSave: @escaping (String) -> Void
+    ) {
+        self.palette = palette
+        self.initialTitle = initialTitle
+        self.isSaving = isSaving
+        self.onCancel = onCancel
+        self.onSave = onSave
+        _title = State(initialValue: initialTitle)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Title") {
+                    TextField("Chat title", text: $title)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(palette.screenBackground)
+            .navigationTitle("Rename chat")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel() }
+                        .disabled(isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isSaving {
+                        ProgressView().tint(palette.brandGreenPrimary)
+                    } else {
+                        Button("Save") { onSave(title) }
+                            .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            }
+        }
     }
 }
 

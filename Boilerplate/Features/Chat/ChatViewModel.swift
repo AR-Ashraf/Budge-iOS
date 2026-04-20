@@ -145,6 +145,21 @@ final class ChatViewModel {
     }
 
     @MainActor
+    func renameChatThreadResult(chatId: String, newTitle: String) async -> Bool {
+        do {
+            try await chatService.updateChatTitle(uid: uid, chatId: chatId, newTitle: newTitle)
+            await refreshChatThreads()
+            return true
+        } catch {
+            #if DEBUG
+            print("[ChatViewModel] renameChatThreadResult failed chatId=\(chatId) err=\(error)")
+            #endif
+            await refreshChatThreads()
+            return false
+        }
+    }
+
+    @MainActor
     func deleteChatThread(chatId: String) async {
         do {
             try await chatService.deleteChat(uid: uid, chatId: chatId)
@@ -153,6 +168,24 @@ final class ChatViewModel {
             beginNewChat()
         }
         await refreshChatThreads()
+    }
+
+    @MainActor
+    func deleteChatThreadResult(chatId: String) async -> Bool {
+        do {
+            try await chatService.deleteChat(uid: uid, chatId: chatId)
+            if self.chatId == chatId {
+                beginNewChat()
+            }
+            await refreshChatThreads()
+            return true
+        } catch {
+            #if DEBUG
+            print("[ChatViewModel] deleteChatThreadResult failed chatId=\(chatId) err=\(error)")
+            #endif
+            await refreshChatThreads()
+            return false
+        }
     }
 
     @MainActor
