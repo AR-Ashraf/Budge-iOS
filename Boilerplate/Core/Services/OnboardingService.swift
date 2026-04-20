@@ -347,6 +347,91 @@ final class OnboardingService {
         }
     }
 
+    // MARK: - Reminders (Firestore; web `/reminders` parity)
+
+    struct Reminder: Identifiable, Hashable {
+        let id: String
+        let title: String
+        let description: String
+        /// Stored as timezone-independent string (web uses `YYYY-MM-DDTHH:mm:ss`, legacy `YYYY-MM-DD`).
+        let date: String
+        let isReminded: Bool
+    }
+
+    func listReminders(uid: String) async throws -> [Reminder] {
+        let coll = db
+            .collection("reminders")
+            .document(uid)
+            .collection("userReminders")
+        let snap = try await coll.order(by: "date", descending: false).getDocuments()
+        return snap.documents.map { doc in
+            let d = doc.data()
+            return Reminder(
+                id: doc.documentID,
+                title: d["title"] as? String ?? "",
+                description: d["description"] as? String ?? "",
+                date: d["date"] as? String ?? "",
+                isReminded: (d["isReminded"] as? Bool) ?? false
+            )
+        }
+    }
+
+    @discardableResult
+    func createReminder(
+        uid: String,
+        title: String,
+        description: String,
+        date: String,
+        isReminded: Bool
+    ) async throws -> String {
+        let ref = db
+            .collection("reminders")
+            .document(uid)
+            .collection("userReminders")
+            .document()
+        try await ref.setData([
+            "title": title,
+            "description": description,
+            "date": date,
+            "isReminded": isReminded,
+            "createdAt": FieldValue.serverTimestamp(),
+        ])
+        return ref.documentID
+    }
+
+    func deleteReminders(uid: String, ids: [String]) async throws {
+        guard !ids.isEmpty else { return }
+        for id in ids {
+            try await db
+                .collection("reminders")
+                .document(uid)
+                .collection("userReminders")
+                .document(id)
+                .delete()
+        }
+    }
+
+    func updateReminder(
+        uid: String,
+        reminderId: String,
+        title: String?,
+        description: String?,
+        date: String?
+    ) async throws {
+        guard !reminderId.isEmpty else { return }
+        var patch: [String: Any] = [:]
+        if let title { patch["title"] = title }
+        if let description { patch["description"] = description }
+        if let date { patch["date"] = date }
+        if patch.isEmpty { return }
+        try await db
+            .collection("reminders")
+            .document(uid)
+            .collection("userReminders")
+            .document(reminderId)
+            .setData(patch, merge: true)
+    }
+
     // MARK: - Chart / Balance Sheet (KMS callables)
 
     struct BudgetYearPayload {

@@ -13,6 +13,8 @@ enum Route: Hashable {
     case profile
     /// My Accounts (web `/accounts` parity). Optional account id scroll target after Balance Sheet tap.
     case accounts(focusAccountId: String?)
+    /// My Reminders (web `/reminders` parity).
+    case reminders
     /// Post-auth onboarding (usually embedded from `RootView`; available for deep links).
     case onboarding
 
@@ -37,6 +39,8 @@ enum Route: Hashable {
         case .accounts(let focus):
             hasher.combine("accounts")
             hasher.combine(focus ?? "")
+        case .reminders:
+            hasher.combine("reminders")
         case .onboarding:
             hasher.combine("onboarding")
         }
@@ -56,6 +60,8 @@ enum Route: Hashable {
             return lhsItem?.id == rhsItem?.id
         case (.accounts(let la), .accounts(let ra)):
             return la == ra
+        case (.reminders, .reminders):
+            return true
         default:
             return false
         }
@@ -81,6 +87,8 @@ extension Route: CustomStringConvertible {
             return "Profile"
         case .accounts(let focus):
             return "Accounts(\(focus ?? "nil"))"
+        case .reminders:
+            return "Reminders"
         case .onboarding:
             return "OnboardingGate"
         }

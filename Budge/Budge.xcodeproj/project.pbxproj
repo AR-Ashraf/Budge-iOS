@@ -100,11 +100,13 @@
 		B475A26895739694F04ABA9C /* UIConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98E7949D910B547074AD449A /* UIConstants.swift */; };
 		B85511B23C925D5C0AAE00F3 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0137DD58E4B5F29AF9F3457B /* AccountsView.swift */; };
 		BF5C49C0A2B0B8236C37C611 /* MockAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4676DBE71A9E4381CD03774C /* MockAPIClient.swift */; };
+		C31A0C3001EA172E76E94839 /* RemindersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222EAD361A2F9EF9458AD40E /* RemindersView.swift */; };
 		C393C3D1C9F4E900D63FF7A6 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 965C7E34D430E1399DC7354D /* AppConstants.swift */; };
 		C3CB35862D7C28403F5166F1 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2799D2FD068F173D1EA1C3 /* SplashView.swift */; };
 		C8200273BEF8835347B3746F /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112FF44A24426FC67AD06258 /* AppEnvironment.swift */; };
 		CBB2A7A76A38D9578EB2F1B6 /* UserDefaultsWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BBFCC3D71342C3476F925F7 /* UserDefaultsWrapper.swift */; };
 		CD9F6EA137AE2B1086AB986F /* VisualizationSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBCDD1326568B0CDC24279A /* VisualizationSpec.swift */; };
+		D111B2AEEFB3E10432EEF384 /* RemindersViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5971895E8690AABE59B0A986 /* RemindersViewModel.swift */; };
 		D2053FB8D527A896173B96D6 /* ChatSidebarDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2510C7B96A895D0A135A7292 /* ChatSidebarDrawer.swift */; };
 		D35333BCE517318FA57DEE83 /* OnboardingFinancialProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64421CF5F46E635557FD4B5D /* OnboardingFinancialProgress.swift */; };
 		D4DD2BB007BC98DED8D374AC /* LoadingButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C14D40AF78FEC4BA2AD17B33 /* LoadingButton.swift */; };
@@ -150,6 +152,7 @@
 		1A5B6568A8AB5B7DDF26D54C /* SwiftDataContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataContainer.swift; sourceTree = "<group>"; };
 		1C7F779A30416BC5E6DF2BE9 /* UIApplication+TopViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIApplication+TopViewController.swift"; sourceTree = "<group>"; };
 		1F23F8FC6763F2B0B4D0CBE7 /* ExampleListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleListViewModel.swift; sourceTree = "<group>"; };
+		222EAD361A2F9EF9458AD40E /* RemindersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersView.swift; sourceTree = "<group>"; };
 		23EB0F613BA1A65BA02ECC16 /* ProfileAvatarCircle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarCircle.swift; sourceTree = "<group>"; };
 		2510C7B96A895D0A135A7292 /* ChatSidebarDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSidebarDrawer.swift; sourceTree = "<group>"; };
 		2651D55D3F617EE991F9DE42 /* BudgeAssistantMarkdownTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgeAssistantMarkdownTheme.swift; sourceTree = "<group>"; };
@@ -172,6 +175,7 @@
 		4C8F08ACBF0FC1D473F9E068 /* APIEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIEndpoint.swift; sourceTree = "<group>"; };
 		50214020408F0875BA5D399F /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
 		5884550E9D42D6BC48BCBE06 /* ReadAloudController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadAloudController.swift; sourceTree = "<group>"; };
+		5971895E8690AABE59B0A986 /* RemindersViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersViewModel.swift; sourceTree = "<group>"; };
 		5B5295A050518F1708738EBA /* Date+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Extensions.swift"; sourceTree = "<group>"; };
 		5BBFCC3D71342C3476F925F7 /* UserDefaultsWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsWrapper.swift; sourceTree = "<group>"; };
 		5EDF0C42672CC5A9A016F11C /* ProfilePhotoProcessing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoProcessing.swift; sourceTree = "<group>"; };
@@ -452,6 +456,15 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		4582DF1A1E651ACD4A414AF3 /* Reminders */ = {
+			isa = PBXGroup;
+			children = (
+				BCCEFAE77EC2606BB1B5E889 /* ViewModels */,
+				9E443200BFAD1B6CD4F60362 /* Views */,
+			);
+			path = Reminders;
+			sourceTree = "<group>";
+		};
 		48257EDD81BAF912E5387F86 /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -495,6 +508,7 @@
 				18B3705A2A3C887FF0BC25F2 /* Chat */,
 				7489BE3711275F771201FFF0 /* Example */,
 				778BCD4E0BCDE05EDCEB3C20 /* Onboarding */,
+				4582DF1A1E651ACD4A414AF3 /* Reminders */,
 				86A1D46A6037C040DBBEEE0E /* Settings */,
 			);
 			path = Features;
@@ -694,6 +708,14 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		9E443200BFAD1B6CD4F60362 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				222EAD361A2F9EF9458AD40E /* RemindersView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		A8B2811E2934526CA17072D6 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -773,6 +795,14 @@
 			);
 			name = Boilerplate;
 			path = ../Boilerplate;
+			sourceTree = "<group>";
+		};
+		BCCEFAE77EC2606BB1B5E889 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				5971895E8690AABE59B0A986 /* RemindersViewModel.swift */,
+			);
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
 		BF04F75261B1F092FE15C5FA /* Views */ = {
@@ -1065,6 +1095,8 @@
 				11CBED32E047D25DFB13C00D /* ProfilePhotoCache.swift in Sources */,
 				8E53C93C90D283F2E50523C3 /* ProfilePhotoProcessing.swift in Sources */,
 				9E3E8ADCE33709FB788BD784 /* ReadAloudController.swift in Sources */,
+				C31A0C3001EA172E76E94839 /* RemindersView.swift in Sources */,
+				D111B2AEEFB3E10432EEF384 /* RemindersViewModel.swift in Sources */,
 				540FBE530AC4055B24D11C88 /* Route.swift in Sources */,
 				19E45294A2D29C12674E912E /* Router.swift in Sources */,
 				613C75948522E17B844E5D7B /* SecondaryButton.swift in Sources */,

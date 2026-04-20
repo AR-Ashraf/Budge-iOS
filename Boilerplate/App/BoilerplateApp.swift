@@ -149,6 +149,8 @@ struct RootView: View {
             ProfileView()
         case .accounts(let focusAccountId):
             AccountsView(focusAccountId: focusAccountId)
+        case .reminders:
+            RemindersView()
         case .onboarding:
             OnboardingGateView()
         }

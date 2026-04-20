@@ -611,7 +611,10 @@ private struct ProfileSettingsSheet: View {
                     )
                 }
 
-                Button(action: onOpenReminders) {
+                NavigationLink {
+                    RemindersView()
+                } label: {
+                    // `NavigationLink` already renders a disclosure indicator in a `List`.
                     settingsRow(title: "My Reminders", systemImage: "bell", showChevron: false)
                 }
 
