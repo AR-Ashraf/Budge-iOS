@@ -413,9 +413,6 @@ struct ChatSidebarDrawer: View {
                 },
                 onOpenReminders: {
                     showProfileComingSoon = true
-                },
-                onOpenAccounts: {
-                    showProfileComingSoon = true
                 }
             )
         }
@@ -538,7 +535,6 @@ private struct ProfileSettingsSheet: View {
     let userEmail: String
     let onLogout: () -> Void
     let onOpenReminders: () -> Void
-    let onOpenAccounts: () -> Void
 
     @Environment(AuthService.self) private var authService
     @Environment(\.dismiss) private var dismiss
@@ -619,7 +615,10 @@ private struct ProfileSettingsSheet: View {
                     settingsRow(title: "My Reminders", systemImage: "bell", showChevron: false)
                 }
 
-                Button(action: onOpenAccounts) {
+                NavigationLink {
+                    AccountsView(focusAccountId: nil)
+                } label: {
+                    // `NavigationLink` already renders a disclosure indicator in a `List`.
                     settingsRow(title: "My Accounts", systemImage: "creditcard", showChevron: false)
                 }
             }

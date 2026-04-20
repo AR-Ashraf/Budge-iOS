@@ -46,6 +46,8 @@ private struct ChatScreen: View {
     @State private var showSidebar: Bool = false
     @State private var showChartSheet: Bool = false
     @State private var chartViewModel: ChartViewModel?
+    /// After Balance Sheet dismiss, push Accounts and scroll to this account id.
+    @State private var pendingAccountsFocusId: String?
     /// From `UIScrollView`: `maxContentOffsetY - contentOffset.y`; near 0 at bottom, larger when scrolled up.
     @State private var scrollDistanceFromBottom: CGFloat = 0
     /// Coalesces rapid `scrollTo` requests (send + Firestore updates) so the list does not animate up/down repeatedly.
@@ -336,14 +338,25 @@ private struct ChatScreen: View {
             .fullScreenCover(isPresented: $showChartSheet) {
                 Group {
                     if let chartViewModel {
-                        ChartSheetView(model: chartViewModel)
+                        ChartSheetView(
+                            model: chartViewModel,
+                            onAccountRowTap: { accountId in
+                                pendingAccountsFocusId = accountId
+                                showChartSheet = false
+                            }
+                        )
                     }
                 }
             }
             .onChange(of: showChartSheet) { _, open in
                 if !open {
+                    let focus = pendingAccountsFocusId
+                    pendingAccountsFocusId = nil
                     chartViewModel = nil
                     Task { await model.refreshFinanceHeader() }
+                    if let focus {
+                        router.navigate(to: .accounts(focusAccountId: focus))
+                    }
                 }
             }
             .animation(.easeInOut(duration: 0.35), value: isEmpty)

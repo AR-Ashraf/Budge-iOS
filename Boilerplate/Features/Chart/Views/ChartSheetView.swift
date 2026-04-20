@@ -6,6 +6,8 @@ struct ChartSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Bindable var model: ChartViewModel
+    /// Tapped an account row in the expanded list — parent may dismiss and push `Accounts`.
+    var onAccountRowTap: ((String) -> Void)? = nil
 
     @State private var showCreateBudget = false
     @State private var isSavingNewCategory = false
@@ -148,6 +150,9 @@ struct ChartSheetView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
                 isKeyboardVisible = false
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .financeAccountsDidChange)) { _ in
+                Task { await model.loadProfileAndAccounts() }
             }
             .task {
                 await model.loadInitialChartData()
@@ -372,29 +377,34 @@ struct ChartSheetView: View {
                     }
                 } else {
                     ForEach(model.accounts) { a in
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(a.name ?? "—")
-                                    .font(.subheadline.weight(.medium))
-                                Text("\(a.type ?? "asset") • \(a.currency ?? "USD")")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Group {
-                                if model.isAccountSummaryLoading {
-                                    RoundedRectangle(cornerRadius: 5)
-                                        .fill(Color.secondary.opacity(0.22))
-                                        .frame(width: 72, height: 18)
-                                } else {
-                                    Text(formatAccountSummaryMoney(a.currentBalance ?? 0, code: (a.currency ?? "USD").uppercased()))
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(Color.green)
+                        Button {
+                            onAccountRowTap?(a.id)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(a.name ?? "—")
+                                        .font(.subheadline.weight(.medium))
+                                    Text("\(a.type ?? "asset") • \(a.currency ?? "USD")")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Group {
+                                    if model.isAccountSummaryLoading {
+                                        RoundedRectangle(cornerRadius: 5)
+                                            .fill(Color.secondary.opacity(0.22))
+                                            .frame(width: 72, height: 18)
+                                    } else {
+                                        Text(formatAccountSummaryMoney(a.currentBalance ?? 0, code: (a.currency ?? "USD").uppercased()))
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(Color.green)
+                                    }
                                 }
                             }
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
                         }
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
+                        .buttonStyle(.plain)
                     }
                 }
             }

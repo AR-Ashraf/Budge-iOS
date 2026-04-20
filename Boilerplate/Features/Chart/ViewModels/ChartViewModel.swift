@@ -104,7 +104,8 @@ final class ChartViewModel {
             startingBalance = Self.parseDouble(profile["startingBalance"]) ?? 0
             currentBalance = Self.parseDouble(profile["currentBalance"]) ?? 0
 
-            accounts = snap.accounts
+            // Mirror web + Accounts screen: only active accounts should appear in the summary list.
+            accounts = snap.accounts.filter(\.isActive)
             if let sb = snap.startingBalance { startingBalance = sb }
             if let cb = snap.currentBalance { currentBalance = cb }
         } catch {

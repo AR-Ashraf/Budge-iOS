@@ -192,6 +192,8 @@ final class OnboardingService {
         let isActive: Bool
         let startingBalance: Double?
         let currentBalance: Double?
+        let accountNumber: String?
+        let bankName: String?
     }
 
     /// Server-decrypted finance read path. Firestore stores ciphertext; UI receives plaintext via Functions.
@@ -219,7 +221,9 @@ final class OnboardingService {
                     currency: item["currency"] as? String,
                     isActive: (item["isActive"] as? Bool) ?? true,
                     startingBalance: Self.doubleFromJSONValue(item["startingBalance"]),
-                    currentBalance: Self.doubleFromJSONValue(item["currentBalance"])
+                    currentBalance: Self.doubleFromJSONValue(item["currentBalance"]),
+                    accountNumber: item["accountNumber"] as? String,
+                    bankName: item["bankName"] as? String
                 )
             }
 
@@ -263,6 +267,83 @@ final class OnboardingService {
         try await financeCalls.run { [functions] in
             let callable = functions.httpsCallable("finance_migrateCurrentUserData")
             _ = try await callable.call()
+        }
+    }
+
+    // MARK: - Accounts (KMS callables, web parity)
+
+    func financeCreateAccount(
+        name: String,
+        type: String,
+        currency: String,
+        startingBalance: Double?,
+        accountNumber: String?,
+        bankName: String?
+    ) async throws -> String {
+        try await financeCalls.run { [functions] in
+            var payload: [String: Any] = [
+                "name": name,
+                "type": type,
+                "currency": currency,
+            ]
+            if let startingBalance {
+                payload["startingBalance"] = NSNumber(value: startingBalance)
+            }
+            if let accountNumber, !accountNumber.isEmpty { payload["accountNumber"] = accountNumber }
+            if let bankName, !bankName.isEmpty { payload["bankName"] = bankName }
+            let callable = functions.httpsCallable("finance_createAccount")
+            let result = try await callable.call(payload)
+            guard let data = result.data as? [String: Any], let id = data["accountId"] as? String else {
+                throw NSError(domain: "OnboardingService", code: 10, userInfo: [NSLocalizedDescriptionKey: "createAccount failed"])
+            }
+            return id
+        }
+    }
+
+    func financeUpdateAccount(
+        accountId: String,
+        name: String?,
+        type: String?,
+        currency: String?,
+        startingBalance: Double?,
+        accountNumber: String?,
+        bankName: String?
+    ) async throws {
+        try await financeCalls.run { [functions] in
+            var payload: [String: Any] = ["accountId": accountId]
+            if let name { payload["name"] = name }
+            if let type { payload["type"] = type }
+            if let currency { payload["currency"] = currency }
+            if let startingBalance { payload["startingBalance"] = NSNumber(value: startingBalance) }
+            if let accountNumber { payload["accountNumber"] = accountNumber }
+            if let bankName { payload["bankName"] = bankName }
+            let callable = functions.httpsCallable("finance_updateAccount")
+            _ = try await callable.call(payload)
+        }
+    }
+
+    func financeDeleteAccount(accountId: String) async throws {
+        try await financeCalls.run { [functions] in
+            let callable = functions.httpsCallable("finance_deleteAccount")
+            _ = try await callable.call(["accountId": accountId])
+        }
+    }
+
+    func financeTransfer(
+        fromAccountId: String,
+        toAccountId: String,
+        amount: Double,
+        note: String?
+    ) async throws {
+        try await financeCalls.run { [functions] in
+            var payload: [String: Any] = [
+                "fromAccountId": fromAccountId,
+                "toAccountId": toAccountId,
+                "amount": NSNumber(value: amount),
+            ]
+            if let note, !note.isEmpty { payload["note"] = note }
+            let callable = functions.httpsCallable("finance_transfer")
+            _ = try await callable.call(payload)
         }
     }
 
