@@ -21,9 +21,9 @@ final class ChatViewModel {
     var chatThreads: [ChatService.ChatThread] = []
     var chatThreadsLoading: Bool = false
 
-    /// Per-send chat mode (default `.ask`). Each user message is stamped with the active mode at send time
+    /// Per-send chat mode (default `.agent`). Each user message is stamped with the active mode at send time
     /// so the Firebase Functions pipeline can route Ask / Agent / Plan strategies independently.
-    var chatMode: ChatMode = .ask
+    var chatMode: ChatMode = .agent
 
     /// After a successful user send, `true` until Firestore shows an assistant message as the latest message (clears keyboard lock / composer disable).
     private(set) var awaitingAssistantReply: Bool = false
@@ -104,7 +104,7 @@ final class ChatViewModel {
         messageDraft = ""
         approvalState = nil
         awaitingAssistantReply = false
-        chatMode = .ask
+        chatMode = .agent
         start()
     }
 
@@ -120,7 +120,7 @@ final class ChatViewModel {
         messageDraft = ""
         approvalState = nil
         awaitingAssistantReply = false
-        chatMode = .ask
+        chatMode = .agent
         start()
     }
 

@@ -86,6 +86,8 @@ targets:
       - package: Firebase
         product: FirebaseFunctions
       - package: Firebase
+        product: FirebaseMessaging
+      - package: Firebase
         product: FirebaseStorage
       - package: GoogleSignIn
         product: GoogleSignIn

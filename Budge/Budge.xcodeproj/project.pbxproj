@@ -24,7 +24,7 @@
 		189523B38AF389298E75FF74 /* ManageBalanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC057B14F78E920689558CA /* ManageBalanceView.swift */; };
 		19C4F9927BDF98194842DD00 /* Date+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B5295A050518F1708738EBA /* Date+Extensions.swift */; };
 		19E45294A2D29C12674E912E /* Router.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7011BD4A47A0653BD15955B7 /* Router.swift */; };
-		1A60177FF5C06C130D48F3A2 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 69693263C03CB41B1DE14D18 /* MarkdownUI */; };
+		1A60177FF5C06C130D48F3A2 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 54214337E06E7EE72CAFC5D0 /* GoogleSignIn */; };
 		1B2646BBAB2A1A0E51B9F4FF /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC0C8365CB738F559ACC6318 /* ChatViewModel.swift */; };
 		1EE4582E4CA9E662E765B156 /* ExampleListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F23F8FC6763F2B0B4D0CBE7 /* ExampleListViewModel.swift */; };
 		1FC06E16B298BC4A214F7457 /* NoAssistantTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40C0618FF8465B1BD3946C37 /* NoAssistantTextField.swift */; };
@@ -88,7 +88,7 @@
 		A15A1208548AF647430100EE /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51141364E73523126CDB11F /* Toast.swift */; };
 		A1D832C3E2D0611C3AF27ED9 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 555565523EE250EA229BB204 /* FirebaseFunctions */; };
 		A46D872D57E3567B8FF7235F /* APIEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C8F08ACBF0FC1D473F9E068 /* APIEndpoint.swift */; };
-		A4D60E14D38BFC0BFBF01B5D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 54214337E06E7EE72CAFC5D0 /* GoogleSignIn */; };
+		A4D60E14D38BFC0BFBF01B5D /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = D29E015DCB58760B5A34F2C7 /* FirebaseStorage */; };
 		A536C4A8D642AB20E7BC0E1C /* WhyUseBudgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E0147AD2753EE915EF6D66 /* WhyUseBudgeView.swift */; };
 		A5736C337CA7C79145E95BC7 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AEFBE04879EE16BDF15BFE4 /* APIClient.swift */; };
 		A5B63E20F5A88BB8F433830C /* ChatModePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB0B1B5C8C54E065436751A6 /* ChatModePicker.swift */; };
@@ -126,10 +126,11 @@
 		F4E65AC2B7C2D9C3DE9A7A42 /* AuthBrandLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90EA0794AA0BEA6097D4142 /* AuthBrandLogo.swift */; };
 		F691B0A3D588F5F9161B9BE4 /* Color+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43CFEF9050B4EF181B8B17DB /* Color+Extensions.swift */; };
 		F6BFCFD3DB6FA9AB4E8BE989 /* FinancialSetupExpenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE0A3814AE7ADDFE2E73BE2 /* FinancialSetupExpenseView.swift */; };
+		F84D567BA2CAB2E69D4F5370 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 69693263C03CB41B1DE14D18 /* MarkdownUI */; };
 		F88A533EF93AD7B1DCBB9CB8 /* BudgetMatrixTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2A757410E6AC2735D6A57DF /* BudgetMatrixTable.swift */; };
 		F97C092400ABE6649AD1F35D /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C53C5AE3CB99DCB1F86BF84 /* Logger.swift */; };
 		FA31ACA3B5A50DCF63B2711D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = C35C31C87147D41961D21093 /* FirebaseFirestore */; };
-		FEE337BD72C1DD6D24F79F0B /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = D29E015DCB58760B5A34F2C7 /* FirebaseStorage */; };
+		FEE337BD72C1DD6D24F79F0B /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 89F683537690BB163FE3135A /* FirebaseMessaging */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -273,9 +274,10 @@
 				D6D7BECE875C5F9579A6A67F /* FirebaseAuth in Frameworks */,
 				FA31ACA3B5A50DCF63B2711D /* FirebaseFirestore in Frameworks */,
 				A1D832C3E2D0611C3AF27ED9 /* FirebaseFunctions in Frameworks */,
-				FEE337BD72C1DD6D24F79F0B /* FirebaseStorage in Frameworks */,
-				A4D60E14D38BFC0BFBF01B5D /* GoogleSignIn in Frameworks */,
-				1A60177FF5C06C130D48F3A2 /* MarkdownUI in Frameworks */,
+				FEE337BD72C1DD6D24F79F0B /* FirebaseMessaging in Frameworks */,
+				A4D60E14D38BFC0BFBF01B5D /* FirebaseStorage in Frameworks */,
+				1A60177FF5C06C130D48F3A2 /* GoogleSignIn in Frameworks */,
+				F84D567BA2CAB2E69D4F5370 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -904,6 +906,7 @@
 				BE7B7DB08468A15DA78D60FD /* FirebaseAuth */,
 				C35C31C87147D41961D21093 /* FirebaseFirestore */,
 				555565523EE250EA229BB204 /* FirebaseFunctions */,
+				89F683537690BB163FE3135A /* FirebaseMessaging */,
 				D29E015DCB58760B5A34F2C7 /* FirebaseStorage */,
 				54214337E06E7EE72CAFC5D0 /* GoogleSignIn */,
 				69693263C03CB41B1DE14D18 /* MarkdownUI */,
@@ -999,7 +1002,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nROOT_DIR=\"/Users/ashraf/Documents/projects/Budge/ios/Budge\"\nSPEC_FILE=\"${ROOT_DIR}/project.yml\"\nPROJECT_FILE=\"${ROOT_DIR}/Budge.xcodeproj/project.pbxproj\"\nXCODEGEN_BIN=\"${ROOT_DIR}/../tools/xcodegen/xcodegen/bin/xcodegen\"\n\n# Avoid recursion / parallel regenerations.\nLOCK_FILE=\"/tmp/budge_xcodegen.lock\"\nif [ -f \"${LOCK_FILE}\" ]; then\n  exit 0\nfi\n\n# If the project doesn't exist yet, generate it.\nif [ ! -f \"${PROJECT_FILE}\" ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\n  exit 0\nfi\n\n# Regenerate only if:\n# - project.yml changed, OR\n# - any Swift file under sources changed since last generation.\nNEEDS_REGEN=0\nif [ \"${SPEC_FILE}\" -nt \"${PROJECT_FILE}\" ]; then\n  NEEDS_REGEN=1\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 0 ]; then\n  if /usr/bin/find \"${ROOT_DIR}/../Boilerplate\" \"${ROOT_DIR}/Budge\" -type f -name \"*.swift\" -newer \"${PROJECT_FILE}\" -print -quit | /usr/bin/grep -q .; then\n    NEEDS_REGEN=1\n  fi\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 1 ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\nfi\n";
+			shellScript = "set -euo pipefail\n\nROOT_DIR=\"${SRCROOT}\"\nSPEC_FILE=\"${ROOT_DIR}/project.yml\"\nPROJECT_FILE=\"${ROOT_DIR}/Budge.xcodeproj/project.pbxproj\"\nXCODEGEN_BIN=\"${ROOT_DIR}/../tools/xcodegen/xcodegen/bin/xcodegen\"\n\n# Avoid recursion / parallel regenerations.\nLOCK_FILE=\"/tmp/budge_xcodegen.lock\"\nif [ -f \"${LOCK_FILE}\" ]; then\n  exit 0\nfi\n\n# If the project doesn't exist yet, generate it.\nif [ ! -f \"${PROJECT_FILE}\" ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\n  exit 0\nfi\n\n# Regenerate only if:\n# - project.yml changed, OR\n# - any Swift file under sources changed since last generation.\nNEEDS_REGEN=0\nif [ \"${SPEC_FILE}\" -nt \"${PROJECT_FILE}\" ]; then\n  NEEDS_REGEN=1\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 0 ]; then\n  if /usr/bin/find \"${ROOT_DIR}/../Boilerplate\" \"${ROOT_DIR}/Budge\" -type f -name \"*.swift\" -newer \"${PROJECT_FILE}\" -print -quit | /usr/bin/grep -q .; then\n    NEEDS_REGEN=1\n  fi\nfi\n\nif [ \"${NEEDS_REGEN}\" -eq 1 ]; then\n  touch \"${LOCK_FILE}\"\n  trap 'rm -f \"${LOCK_FILE}\"' EXIT\n  \"${XCODEGEN_BIN}\" generate --spec \"${SPEC_FILE}\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1419,6 +1422,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 01D96E4C859C9067FF9D7A2E /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
 			productName = MarkdownUI;
+		};
+		89F683537690BB163FE3135A /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EDB4414368BBCA208BC154EE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 		BE7B7DB08468A15DA78D60FD /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;

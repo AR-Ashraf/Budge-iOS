@@ -34,6 +34,27 @@ final class OnboardingService {
         try await ref.setData(fields, merge: true)
     }
 
+    // MARK: - Presence (push notification gating)
+
+    /// Tracks whether the user is currently active in the iOS app.
+    func updateUserPresence(uid: String, isInApp: Bool, activeChatId: String?) async {
+        let ref = db.collection("userPresence").document(uid)
+        var payload: [String: Any] = [
+            "isInApp": isInApp,
+            "lastActiveAt": FieldValue.serverTimestamp(),
+        ]
+        if let activeChatId {
+            payload["activeChatId"] = activeChatId
+        } else {
+            payload["activeChatId"] = FieldValue.delete()
+        }
+        do {
+            try await ref.setData(payload, merge: true)
+        } catch {
+            // Best-effort; do not break UX if presence write fails.
+        }
+    }
+
     /// Save currency in Firestore and write finance balances via Functions so Firestore stores ciphertext only.
     /// The entire operation holds the finance gate so no other callable (e.g. `finance_getSnapshot`) can run
     /// until `finance_setBalances` / `finance_setAccountBalance` finish — avoids GTMSessionFetcher overlap and

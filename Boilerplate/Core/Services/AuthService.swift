@@ -32,6 +32,7 @@ final class AuthService {
 
     private var didStart = false
     private(set) var hasCompletedInitialAuthCheck = false
+    private static let cachedFcmTokenKey = "cachedFcmRegistrationToken"
 
     // MARK: - Initialization
 
@@ -76,6 +77,8 @@ final class AuthService {
             guard let self else { return }
             Task { @MainActor in
                 await self.hydrateUser(firebaseUser)
+                // If we already have an FCM token, ensure it's stored for this uid after sign-in.
+                self.upsertCachedFcmTokenIfPresent()
                 if !self.hasCompletedInitialAuthCheck {
                     self.hasCompletedInitialAuthCheck = true
                 }
@@ -84,10 +87,27 @@ final class AuthService {
 
         Task { @MainActor in
             await hydrateUser(Auth.auth().currentUser)
+            upsertCachedFcmTokenIfPresent()
             if !hasCompletedInitialAuthCheck {
                 hasCompletedInitialAuthCheck = true
             }
         }
+    }
+
+    private func upsertCachedFcmTokenIfPresent() {
+        guard let uid = Auth.auth().currentUser?.uid, !uid.isEmpty else { return }
+        let token = (UserDefaults.standard.string(forKey: Self.cachedFcmTokenKey) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty else { return }
+        let ref = Firestore.firestore().collection("fcmTokens").document()
+        let now = FieldValue.serverTimestamp()
+        ref.setData([
+            "uid": uid,
+            "token": token,
+            "platform": "ios",
+            "updatedAt": now,
+            "createdAt": now,
+        ], merge: true)
     }
 
     /// Sign in / sign up using Google (Firebase Auth).

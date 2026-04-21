@@ -71,6 +71,12 @@ private struct ChatScreen: View {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
+    private func handleChatDeepLink(_ note: Notification) {
+        let chatId = (note.userInfo?["chatId"] as? String) ?? ""
+        guard !chatId.isEmpty else { return }
+        model.openChat(chatId: chatId)
+    }
+
     /// Debounced scroll: only the latest request within ~140ms runs (avoids stacked `withAnimation` jank).
     /// Merges Firestore `agenticSteps` with a local classify row. Suppresses **stale** snapshots where every step is
     /// still `completed`/`failed` from the **previous** turn (Firestore often delivers that briefly before the new pipeline writes).
@@ -400,6 +406,9 @@ private struct ChatScreen: View {
                 if awaiting {
                     dismissChatKeyboard()
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openChatFromPush)) { note in
+                handleChatDeepLink(note)
             }
         }
     }

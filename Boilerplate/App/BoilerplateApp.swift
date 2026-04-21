@@ -61,6 +61,7 @@ struct RootView: View {
     @Environment(AuthService.self) private var authService
     @Environment(OnboardingService.self) private var onboarding
     @Environment(ThemeController.self) private var themeController
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var onboardingProfile: [String: Any]?
     @State private var isFetchingOnboardingProfile = false
@@ -108,6 +109,17 @@ struct RootView: View {
             // Reset cached onboarding routing profile on auth user changes.
             onboardingProfile = nil
             Task { await fetchOnboardingProfileIfNeeded() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard let uid = authService.currentUser?.id else { return }
+            switch phase {
+            case .active:
+                Task { await onboarding.updateUserPresence(uid: uid, isInApp: true, activeChatId: nil) }
+            case .inactive, .background:
+                Task { await onboarding.updateUserPresence(uid: uid, isInApp: false, activeChatId: nil) }
+            @unknown default:
+                break
+            }
         }
     }
 
