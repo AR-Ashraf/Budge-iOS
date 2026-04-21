@@ -47,6 +47,71 @@ struct VisualizationSpec: Decodable, Equatable {
         let decoder = JSONDecoder()
         do { return try decoder.decode(VisualizationSpec.self, from: data) } catch { return nil }
     }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        type = (try? c.decode(String.self, forKey: .type)) ?? ""
+        title = try? c.decode(String.self, forKey: .title)
+        subtype = try? c.decode(String.self, forKey: .subtype)
+
+        // Charts
+        series = try? c.decode([Series].self, forKey: .series)
+        data = try? c.decode([PieDatum].self, forKey: .data)
+        value = try? c.decode(Double.self, forKey: .value)
+        goal = try? c.decode(Double.self, forKey: .goal)
+
+        // Table (support both schemas):
+        // 1) "web" schema: columns=[{key,label,align}], rows=[{key:value, ...}]
+        // 2) "simple" schema: columns=["Date","Account",...], rows=[["2026-..","Main",...], ...]
+        if let colsObj = try? c.decode([TableColumn].self, forKey: .columns) {
+            columns = colsObj
+            rows = try? c.decode([[String: JSONValue]].self, forKey: .rows)
+        } else if let colsStr = try? c.decode([String].self, forKey: .columns) {
+            let cols = colsStr.map { TableColumn(key: $0, label: $0, align: nil) }
+            columns = cols
+
+            if let rawRowArrays = try? c.decode([[JSONValue]].self, forKey: .rows) {
+                let mapped: [[String: JSONValue]] = rawRowArrays.map { arr in
+                    var dict: [String: JSONValue] = [:]
+                    for (idx, col) in colsStr.enumerated() {
+                        if idx < arr.count {
+                            dict[col] = arr[idx]
+                        } else {
+                            dict[col] = .null
+                        }
+                    }
+                    return dict
+                }
+                rows = mapped
+            } else if let rawStringRows = try? c.decode([[String]].self, forKey: .rows) {
+                let mapped: [[String: JSONValue]] = rawStringRows.map { arr in
+                    var dict: [String: JSONValue] = [:]
+                    for (idx, col) in colsStr.enumerated() {
+                        dict[col] = idx < arr.count ? .string(arr[idx]) : .null
+                    }
+                    return dict
+                }
+                rows = mapped
+            } else {
+                rows = nil
+            }
+        } else {
+            columns = nil
+            rows = nil
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case title
+        case subtype
+        case columns
+        case rows
+        case series
+        case data
+        case value
+        case goal
+    }
 }
 
 /// Minimal JSON "any" for decoding visualization rows and x/y values.

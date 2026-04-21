@@ -6,6 +6,7 @@ import SwiftUI
 final class ChatViewModel {
     @ObservationIgnored private var messagesListener: ListenerRegistration?
     @ObservationIgnored private var approvalListener: ListenerRegistration?
+    @ObservationIgnored private var userDocListener: ListenerRegistration?
 
     private let chatService: ChatService
     private let onboarding: OnboardingService
@@ -36,8 +37,13 @@ final class ChatViewModel {
     var headerBalanceLoading: Bool = false
 
     @ObservationIgnored private var financeHeaderTask: Task<Void, Never>?
+    /// Coalesces rapid Firestore updates (transactions → triggers → user balance) into a single header refetch.
+    @ObservationIgnored private var financeHeaderCoalesceTask: Task<Void, Never>?
     /// Set synchronously on first `refreshFinanceHeader` entry so overlapping calls (e.g. send while initial fetch runs) never toggle the header spinner.
     @ObservationIgnored private var financeHeaderInitialFetchClaimed = false
+    @ObservationIgnored private var didSeeInitialUserDocSnapshot = false
+    @ObservationIgnored private var lastUserDocBalanceMarker: String = ""
+    @ObservationIgnored private var lastUserDocCurrencyMarker: String = ""
 
     init(chatService: ChatService, onboarding: OnboardingService, uid: String, chatId: String = "default") {
         self.chatService = chatService
@@ -49,7 +55,9 @@ final class ChatViewModel {
     deinit {
         messagesListener?.remove()
         approvalListener?.remove()
+        userDocListener?.remove()
         financeHeaderTask?.cancel()
+        financeHeaderCoalesceTask?.cancel()
     }
 
     func start() {
@@ -86,9 +94,53 @@ final class ChatViewModel {
 
         Task { await refreshChatThreads() }
 
+        if userDocListener == nil {
+            // Listen to `users/{uid}` changes (server triggers update currentBalance/currency after tx writes).
+            userDocListener = Firestore.firestore()
+                .collection("users")
+                .document(uid)
+                .addSnapshotListener { [weak self] snap, _ in
+                    guard let self else { return }
+                    guard let data = snap?.data() else { return }
+
+                    // Markers are strings so encrypted/binary-ish values still compare safely.
+                    let balMarker = String(describing: data["currentBalance"] ?? "")
+                    let curMarker = String(describing: data["currency"] ?? "")
+
+                    // First snapshot just establishes baseline; avoid double-fetching on screen entry.
+                    if !self.didSeeInitialUserDocSnapshot {
+                        self.didSeeInitialUserDocSnapshot = true
+                        self.lastUserDocBalanceMarker = balMarker
+                        self.lastUserDocCurrencyMarker = curMarker
+                        return
+                    }
+
+                    let changed = (balMarker != self.lastUserDocBalanceMarker) || (curMarker != self.lastUserDocCurrencyMarker)
+                    if !changed { return }
+
+                    self.lastUserDocBalanceMarker = balMarker
+                    self.lastUserDocCurrencyMarker = curMarker
+
+                    self.scheduleFinanceHeaderRefresh(debounceMs: 350)
+                }
+        }
+
         financeHeaderTask?.cancel()
         financeHeaderTask = Task { [weak self] in
             await self?.refreshFinanceHeader()
+        }
+    }
+
+    private func scheduleFinanceHeaderRefresh(debounceMs: UInt64) {
+        financeHeaderCoalesceTask?.cancel()
+        financeHeaderCoalesceTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: debounceMs * 1_000_000)
+            await MainActor.run {
+                self?.financeHeaderTask?.cancel()
+                self?.financeHeaderTask = Task { [weak self] in
+                    await self?.refreshFinanceHeader()
+                }
+            }
         }
     }
 
